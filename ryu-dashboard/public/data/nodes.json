@@ -1,0 +1,17 @@
+[
+    {
+        "id" : "1",
+        "type" : "function",
+        "label" : "web"
+    },
+    {
+        "id" : "2",
+        "type" : "function",
+        "label" : "service"
+    },
+    {
+        "id" : "3",
+        "type" : "function",
+        "label" : "database"
+    }
+]

@@ -1,0 +1,31 @@
+[
+    {
+        "ip": "192.168.173.101",
+        "function": "Service",
+        "priority": "User",
+        "type": "Shipping",
+        "Security": "Normal"
+    },
+    {
+        "ip": "192.168.173.102",
+        "function": "Web",
+        "priority": "User",
+        "type": "Shipping",
+        "Security": "Normal"
+    },
+    {
+        "ip": "192.168.173.103",
+        "function": "Database",
+        "priority": "User",
+        "type": "Shipping",
+        "Security": "Normal"
+    },
+    {
+        "ip": "192.168.173.28",
+        "function": "Web",
+        "priority": "User",
+        "type": "Payment",
+        "application": "MRP",
+        "environment": "development"
+    }
+]
