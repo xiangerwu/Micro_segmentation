@@ -34,8 +34,7 @@ function IntentTable() {
     }, [egress ]);  // 只有在 selectedLabel 改變時才會觸發
 
     useEffect(() => {
-        if (ingress) {
-            
+        if (ingress) {           
             fetch(`${API_URL_LABEL}${ingress}`)
                 .then((response) => response.json())
                 .then((data) => {
@@ -49,6 +48,12 @@ function IntentTable() {
         }
     }, [ingress]);  // 只有在 selectedLabel 改變時才會觸發
 
+    useEffect(() => {
+        if (selectedProtocol === "ICMP") {
+            setInputValue("");
+        }
+    }, [selectedProtocol]);
+
 
     const handleProtocolChange = (event) => {
         setSelectedProtocol(event.target.value);  // 更新選中的關聯
@@ -59,13 +64,32 @@ function IntentTable() {
             "method" : method,
             "egress" : egress,
             "egresstype" : egresstype,
-            "prtotcol" : selectedProtocol,
+            "protocol" : selectedProtocol,
             "port" : inputValue,
             "ingress" : ingress,
             "ingresstype" : ingresstype
         }
        
         console.log(data)
+        // 應用意圖
+        const POST_API = "http://sdn.yuntech.poc.com/datacenter/intent"
+        fetch(POST_API, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        })
+        .then((response) => {
+            if (response.ok) {
+                alert("Intent applied successfully");
+            } else {
+                alert("Error applying intent");
+            }
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
     };
 
 
@@ -75,7 +99,7 @@ function IntentTable() {
                 意圖設定
             </Heading>
 
-            <HStack mt="5%" spacing="24px">
+            <HStack m="5%" spacing="24px">
                 <Box justifyItems="center">
                     <Text fontSize="xl" as="b">
                         方法
@@ -149,10 +173,10 @@ function IntentTable() {
                     <Text fontSize="xl" as="b">
                         標籤項目
                     </Text>
-                    <Select placeholder="Select option">
+                    <Select placeholder="Select option" onChange={(e) => {setingresstype(e.target.value)}}>
                         {ingress_list.length > 0 ? (
                             ingress_list.map((item, index) => (
-                                <option key={index} value={item} onChange={(e) => setingresstype(e.target.value)}>
+                                <option key={index} value={item} >
                                     {item}
                                 </option>
                             ))

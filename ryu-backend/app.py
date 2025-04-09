@@ -89,37 +89,47 @@ def insert_epg(ip , info):
             INSERT INTO epg (ip_id, label_type_id, label_value_id)
             VALUES (%s, %s, %s)
             ON DUPLICATE KEY UPDATE label_value_id = VALUES(label_value_id);
-        """
+        """       
         cursor.execute(sqlstr, (results[0][0], label_type_id, label_value_id,))
         conn.commit()
     conn.close()
     
-# 根據條件過濾出符合的 IP
-def get_matching_ips(condition, epg_data):
-    matching_ips = []
-    category, value = condition.split(": ")
-   
-    for host in epg_data:
-        # 檢查每個host的對應字段是否匹配
-        if category == "Function" and value == host['Function']:
-            matching_ips.append(host['IP'])
-        elif category == "Priority" and value == host['Priority']:
-            matching_ips.append(host['IP'])
-            print(host['IP'])
-        elif category == "Type" and value == host['Type']:
-            matching_ips.append(host['IP'])
-        elif category == "Security" and value == host['Security']:
-            matching_ips.append(host['IP'])
-    return matching_ips
+    # 🔽 寫入epg.json
+    new_entry = {
+        "ip": ip,
+        "function": info.get("function", "Null"),
+        "priority": info.get("priority", "Null"),
+        "type": info.get("type", "Null"),
+        "application": info.get("application", "Null"),
+        "environment": info.get("environment", "Null")
+    }
+    try:
+        with open('epg.json', 'r') as file:
+            epg_data = json.load(file)
+    except FileNotFoundError:
+        epg_data = []
 
+    updated = False
+    for entry in epg_data:
+        if entry['ip'] == ip:
+            entry.update(new_entry)
+            updated = True
+            break
 
-# 取得特定標籤 ex : function,type,,environment,application
+    if not updated:
+        epg_data.append(new_entry)
+
+    with open('epg.json', 'w') as file:
+        json.dump(epg_data, file, indent=4)
+    
+
+# 取得特定標籤 ex : function,type,environment,application
 @app.route('/datacenter/label/<category>', methods=['GET'])
 def get_label(category):
     labels = load_labels(category)
     return jsonify(labels)
     
-# 為 IP 去填上標籤
+# 為 IP 去填上標籤，組成EPG
 @app.route('/datacenter/submit_labels', methods=['POST'])
 def submit_labels():
     data = request.get_json()
@@ -189,17 +199,29 @@ async def post_intent():
     data = request.get_json()
     
     method = data.get('method' , '')  # allow or deny
-    egresstype = data.get('egresstype','') # egress label
-    egress = data.get('egress','')  # egress type   
+    egresstype = data.get('egresstype','') #value
+    egress = data.get('egress','')  # function, type, environment, application .. etc 
     protocol = data.get('protocol','') # TCP、UDP、ICMP
-    ingresstype = data.get('ingresstype','') # ingress label
-    ingress = data.get('ingress','') # ingress
-    port = data.get('port') # 3306,22,80..etc..       
+    ingresstype = data.get('ingresstype','') #  value
+    ingress = data.get('ingress','') #function, type, environment, application .. etc
+    port = data.get('port') # 3306,22,80..etc..  
     
-    with open('intent.txt', 'a') as file :
-        file.write(f"{method} {egresstype}:{egress}, {protocol}:{port}, {ingresstype}:{ingress} \n")
-    await transform_intent_to_dsl() #把DSL傳送到 Controller
-    return "Intent data written to file.", 200
+    new_entry = f"{method} {egress}:{egresstype}, {protocol}:{port}, {ingress}:{ingresstype} \n"     
+    
+    try:
+        with open('intent.txt', 'r') as file:
+            existing_lines = file.readlines()
+    except FileNotFoundError:
+        existing_lines = []
+    
+    if new_entry not in existing_lines:
+        with open('intent.txt', 'a') as file:
+            file.write(new_entry)
+        await transform_intent_to_dsl()
+        return "Intent written to file.", 200
+    else:
+        print("Intent already exists.")
+        return "Intent already exists.", 200
 
 # 取得所有DSL，用於前端面板模擬
 @app.route('/datacenter/dsl', methods=['GET'])

@@ -1,3 +1,5 @@
+# gateway 請執行這隻程式
+
 import asyncio
 import websockets
 import json

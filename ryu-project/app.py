@@ -38,12 +38,50 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         self.mac_to_port.setdefault(datapath.id, {})
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-
-        # Install table-miss flow entry
-        match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                          ofproto.OFPCML_NO_BUFFER)]
+        # actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCML_NO_BUFFER)]
+        
+        # 1️⃣ 預設拒絕所有封包
+        match = parser.OFPMatch()       
+        actions = []
         self.add_flow(datapath, 0, match, actions)
+        
+        # 2️⃣ 手動建立 IP → MAC 對應表
+        ip_mac_map = {
+            "192.168.173.28": "0a:00:27:00:00:08",  # Gateway            
+            "192.168.173.101": "00:00:00:00:00:01",  # h1
+            "192.168.173.102": "00:00:00:00:00:02",  # h2
+            "192.168.173.103": "00:00:00:00:00:03",  # h3
+        }
+        # 3️⃣ 模擬 mac 對 port（依照連線順序手動指定）
+        host_ports = {
+            "0a:00:27:00:00:08": 1,            
+            "00:00:00:00:00:01": 3,  # h1
+            "00:00:00:00:00:02": 4,  # h2
+            "00:00:00:00:00:03": 5,  # h3
+        }
+        
+        # 4️⃣ 所有 host 列表（後面迴圈要用）
+        hosts = ["192.168.173.101", "192.168.173.102", "192.168.173.103"]            
+        
+       # 5️⃣ 允許 gateway 與所有 hosts 通訊
+        for host_ip in hosts:
+            host_mac = ip_mac_map[host_ip]
+            host_port = host_ports[host_mac]
+
+            # 允許 28 → host
+            match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.28", ipv4_dst=host_ip)
+            actions = [parser.OFPActionOutput(host_port)]
+            self.add_flow(datapath, 100, match, actions)
+
+            # 允許 host → 28
+            match = parser.OFPMatch(eth_type=0x0800, ipv4_src=host_ip, ipv4_dst="192.168.173.28")
+            out_port = host_ports[ip_mac_map["192.168.173.28"]]
+            actions = [parser.OFPActionOutput(out_port)]
+            self.add_flow(datapath, 100, match, actions)
+
+
+	
+        # 載入 其他 DSL 規則 
         self.setup_acl_rules(datapath)
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):

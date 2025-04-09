@@ -3,10 +3,12 @@ import requests
 import websockets
 
 # 根據條件過濾出符合的 IP
-def get_matching_ips(type,label):
+def get_matching_ips(type,label):     
     with open('epg.json', 'r') as file:
         data = json.load(file)              
-    matching_ips = [entry['IP'] for entry in data if entry[type] == label]
+    # 假設：type = "function"  、label = "Web"，
+   
+    matching_ips = [entry['ip'] for entry in data if entry.get(type, "").lower() == label.lower()]
     return matching_ips
 
 # 把策略更新到ryu  
@@ -78,7 +80,7 @@ async def update_policy_to_iptables():
     # 開啟websocket，要把策略更新到host上的iptables
     
     uri = f'ws://{ingress_ip}:8766'
-    print(uri)
+   
     # 資料發送
     async with websockets.connect(uri) as websocket: 
         # 將字典編碼為JSON
@@ -94,12 +96,13 @@ async def update_policy_to_iptables():
 # 將intent 轉換成dsl
 async def transform_intent_to_dsl():
     with open('intent.txt','r') as intent_file:
-        intents = intent_file.readlines()
-   
+        intents = [line.strip() for line in intent_file if line.strip()]
+    
     # 開啟 dsl.txt 準備寫入    
     with open('dsl.txt', 'w+') as dsl_file:
         for intent in intents:            
-            parts = intent.strip().split(",")            
+            parts = intent.strip().split(",")  
+           
             # 構建 DSL 格式
             # 假設格式為 allow{TCP, 192.168.173.102, 192.168.173.103 },{ 80, (function:Web),(function:Database) }
             egresstype = parts[0].split(" ")[1].split(":")[0]
@@ -112,10 +115,11 @@ async def transform_intent_to_dsl():
             allow = parts[0].split(" ")[0]
             protocol = parts[1].split(":")[0].strip()  # TCP or UDP or ICMP
             egressips = get_matching_ips(egresstype,egresslabel)
+           
             ingressips = get_matching_ips(ingresstype,ingresslabel)
-            
+          
             port = parts[1].split(":")[1].strip()  # 3306  
-            print(ingressips)
+            
             for egress_ip in egressips:
                 for ingress_ip in ingressips:                    
                     # 組合為需要的 DSL 格式

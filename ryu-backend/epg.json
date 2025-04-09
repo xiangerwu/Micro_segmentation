@@ -1,31 +1,26 @@
 [
     {
         "ip": "192.168.173.101",
-        "function": "Service",
+        "function": "Web",
         "priority": "User",
-        "type": "Shipping",
-        "Security": "Normal"
+        "type": "Management",
+        "application": "MRP",
+        "environment": "production"
     },
     {
         "ip": "192.168.173.102",
-        "function": "Web",
+        "function": "Service",
         "priority": "User",
-        "type": "Shipping",
-        "Security": "Normal"
+        "type": "Management",
+        "application": "MRP",
+        "environment": "production"
     },
     {
         "ip": "192.168.173.103",
         "function": "Database",
         "priority": "User",
-        "type": "Shipping",
-        "Security": "Normal"
-    },
-    {
-        "ip": "192.168.173.28",
-        "function": "Web",
-        "priority": "User",
-        "type": "Payment",
-        "application": "MRP",
+        "type": "Management",
+        "application": "PLM",
         "environment": "development"
     }
 ]
