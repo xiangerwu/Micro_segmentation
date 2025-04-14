@@ -14,6 +14,7 @@ from ryu.app.wsgi import ControllerBase, WSGIApplication, route
 from ryu.lib import dpid as dpid_lib
 from acl_rules import parse_acl, update_acl_rules
 from ryu.topology.api import get_host  # 引入拓撲 API
+from ryu.topology import switches
 
 
 simple_switch_instance_name = 'simple_switch_api_app'
@@ -29,6 +30,7 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         self.mac_to_port = {}
         self.switches = {}
         wsgi = kwargs['wsgi']
+        self.switches = {}
         wsgi.register(SimpleSwitchController, {simple_switch_instance_name: self})
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -38,12 +40,12 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         self.mac_to_port.setdefault(datapath.id, {})
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-        # actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCML_NO_BUFFER)]
         
-        # 1️⃣ 預設拒絕所有封包
-        match = parser.OFPMatch()       
+        # 1️⃣ 其餘一律封鎖（drop）
+        match = parser.OFPMatch()  # 匹配所有
         actions = []
         self.add_flow(datapath, 0, match, actions)
+        
         
         # 2️⃣ 手動建立 IP → MAC 對應表
         ip_mac_map = {
@@ -71,35 +73,36 @@ class SimpleSwitchRest13(app_manager.RyuApp):
             
             # 允許 24 → host
             match = parser.OFPMatch(eth_type=0x0800, ipv4_src=host_ip, ipv4_dst="192.168.173.19")
-            actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)] 
+            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)] 
             self.add_flow(datapath, 100, match, actions)          
 
             match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.19", ipv4_dst=host_ip)
-            actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
             self.add_flow(datapath, 100, match, actions)
             
             match = parser.OFPMatch(eth_type=0x0806, ipv4_src=host_ip, ipv4_dst="192.168.173.19")
-            actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
             self.add_flow(datapath, 100, match, actions)
             
             match = parser.OFPMatch(eth_type=0x0806, ipv4_src="192.168.173.19", ipv4_dst=host_ip)
-            actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+            self.add_flow(datapath, 100, match, actions)
+            
+            match = parser.OFPMatch(eth_type=0x88cc, ipv4_src="192.168.173.19", ipv4_dst=host_ip)
+            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+            self.add_flow(datapath, 100, match, actions)
+            
+            match = parser.OFPMatch(eth_type=0x88cc, ipv4_src=host_ip, ipv4_dst="192.168.173.19")
+            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
             self.add_flow(datapath, 100, match, actions)
         
         match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.24", ipv4_dst="192.168.173.19")
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
         self.add_flow(datapath, 100, match, actions)
         
         match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.19", ipv4_dst="192.168.173.24")
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
         self.add_flow(datapath, 100, match, actions)
-        
-        match = parser.OFPMatch(eth_type=0x0806)
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
-        self.add_flow(datapath, 1, match, actions)
-
-       
-
     
         # 載入 其他 DSL 規則 
         self.setup_acl_rules(datapath)
@@ -215,7 +218,8 @@ class SimpleSwitchController(ControllerBase):
     def list_topology_hosts(self, req, **kwargs):
         # 從拓撲中獲取所有主機資訊
         all_hosts = get_host(self.simpl_switch_spp, None)  # 獲取所有主機
-        
+        for h in all_hosts:
+            print(f"[TOPO] host MAC: {h.mac}, IPs: {h.ipv4}, port: {h.port}")
         # 將主機資訊轉換為 JSON 格式
         body = json.dumps([host.to_dict() for host in all_hosts])
         print(body)

@@ -31,6 +31,7 @@ if __name__ == '__main__':
                   link=TCLink,
                   autoSetMacs=True)
 
+
     net.start()
 
     # 等待 interface 建立完成
