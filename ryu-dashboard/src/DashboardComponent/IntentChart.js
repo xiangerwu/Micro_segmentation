@@ -61,18 +61,18 @@ function IntentChart() {
 
           //const edgesResponse = await fetch('/data/edges.json');
           //const edgesData = await edgesResponse.json();
-
+         
           const updatedEdges = ResJson.edges.map(edge => ({
             id: edge.id,
             source: edge.source,
             target: edge.target,
             label: edge.label,
             animated: true, 
-            
-            style: { stroke: 'teal' }, 
+            action : edge.action,
+            style: { stroke: edge.action == "deny" ? "red" : "teal" }, 
             markerEnd: { type: MarkerType.ArrowClosed },
           }));
-          
+          console.log(updatedEdges)
           setEdges(updatedEdges)
     }
 

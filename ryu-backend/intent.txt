@@ -1,6 +1,2 @@
 deny function:Service, ICMP:, function:Database 
-allow function:Service, ICMP:, function:Database 
 allow function:Web, ICMP:, function:Service 
-deny function:Web, ICMP:, application:PLM 
-allow function:Web, ICMP:, application:PLM 
-allow function:Web, TCP:80, function:Database 

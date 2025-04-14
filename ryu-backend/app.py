@@ -254,7 +254,8 @@ def get_all_dsl():
                         "id": f"e{line_counter}-2",
                         "source": source_label,  # 使用 source_label 這裡直接使用標籤名
                         "target": target_label,  # 使用 target_label 這裡直接使用標籤名
-                        "label": label
+                        "label": label,
+                        "action" : action
                 })
                 line_counter += 1
             
