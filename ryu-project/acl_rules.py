@@ -35,13 +35,15 @@ def update_acl_rules(data):
             ingress_ip = entry['ingress_ip']
             protocol = entry['protocol']
             method = entry['method']
-
-            
+  
             # 根據 method（allow 或 deny）來生成規則
             rule = f"{method} {protocol} from {egress_ip} to {ingress_ip}\n"
             print(rule)
             # 將規則寫入 acl_rules.txt
             acl_file.write(rule)
             
-
-    print("ACL rules have been updated successfully.")
+            # 自動補 ICMP 雙向流（僅限 allow）
+            if protocol.upper() == "ICMP" and method.lower() == "allow":
+                reverse_rule = f"{method} {protocol} from {ingress_ip} to {egress_ip}\n"
+                print(reverse_rule)
+                acl_file.write(reverse_rule)

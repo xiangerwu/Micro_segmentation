@@ -24,6 +24,13 @@ class SimpleSwitchRest13(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     
     _CONTEXTS = { 'wsgi': WSGIApplication }
+    
+    dpid = {}
+    
+     #  手動建立 IP → MAC 對應表
+    ip_mac_map = {}
+    #  模擬 mac 對 port（依照連線順序手動指定）
+    host_ports = { }
 
     def __init__(self, *args, **kwargs):
         super(SimpleSwitchRest13, self).__init__(*args, **kwargs)
@@ -31,12 +38,30 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         self.switches = {}
         wsgi = kwargs['wsgi']
         self.switches = {}
+        self.ip_mac_map = {
+             "192.168.173.19": "08:00:27:a9:a6:9d", # Mininet
+            "192.168.173.24": "0a:00:27:00:00:07",  # Gateway            
+            "192.168.173.101": "00:00:00:00:00:01",  # h1
+            "192.168.173.102": "00:00:00:00:00:02",  # h2
+            "192.168.173.103": "00:00:00:00:00:03",  # h3
+        }
+        self.host_ports = {
+            "08:00:27:a9:a6:9d": 1,  # Mininet
+            "0a:00:27:00:00:07" : 1,
+            "00:00:00:00:00:01": 2,  # h1
+            "00:00:00:00:00:02": 3,  # h2
+            "00:00:00:00:00:03": 4,  # h3
+        }
         wsgi.register(SimpleSwitchController, {simple_switch_instance_name: self})
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
+        
         self.switches[datapath.id] = datapath
+        
+        dpid = datapath.id 
+        print(dpid)
         self.mac_to_port.setdefault(datapath.id, {})
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -45,31 +70,18 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         match = parser.OFPMatch()  # 匹配所有
         actions = []
         self.add_flow(datapath, 0, match, actions)
-        
-        
-        # 2️⃣ 手動建立 IP → MAC 對應表
-        ip_mac_map = {
-            "192.168.173.19": "08:00:27:a9:a6:9d", # Mininet
-            "192.168.173.24": "0a:00:27:00:00:07",  # Gateway            
-            "192.168.173.101": "00:00:00:00:00:01",  # h1
-            "192.168.173.102": "00:00:00:00:00:02",  # h2
-            "192.168.173.103": "00:00:00:00:00:03",  # h3
-        }
-        # 3️⃣ 模擬 mac 對 port（依照連線順序手動指定）
-        host_ports = {               
-            "08:00:27:a9:a6:9d": 1,  # Mininet
-            "0a:00:27:00:00:07" : 1,
-            "00:00:00:00:00:01": 2,  # h1
-            "00:00:00:00:00:02": 3,  # h2
-            "00:00:00:00:00:03": 4,  # h3
-        }
+        #  ARP 泛洪規則
+        match = parser.OFPMatch(eth_type=0x0806)
+        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+        self.add_flow(datapath, 200, match, actions)
+
         
         # 4️⃣ 所有 host 列表（後面迴圈要用）
         hosts = ["192.168.173.101", "192.168.173.102", "192.168.173.103"]   
         
         for host_ip in hosts:
-            host_mac = ip_mac_map[host_ip]  #針對 ip 取出 mac
-            host_port = host_ports[host_mac] # 再針對mac 取出port
+            host_mac = self.ip_mac_map[host_ip]  #針對 ip 取出 mac
+            host_port = self.host_ports[host_mac] # 再針對mac 取出port
             
             # 允許 24 → host
             match = parser.OFPMatch(eth_type=0x0800, ipv4_src=host_ip, ipv4_dst="192.168.173.19")
@@ -134,11 +146,11 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         ofproto = datapath.ofproto
         
         action = parsed_rule[0]  # allow or deny 
-        
+       
         protocol = parsed_rule[1] # TCP , UDP , ICMP
         src_ip = parsed_rule[3]  # Source IP
         dst_ip = parsed_rule[5]  # Destination IP
-       
+        
         match = None 
         if protocol == 'TCP' :
             match = parser.OFPMatch(eth_type=0x0800, ipv4_src=src_ip, ipv4_dst=dst_ip, ip_proto=6)  # IP 協議 6 是 TCP
@@ -149,10 +161,13 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         # 根據 action（allow 或 deny）設置動作
         actions = []
         if action == "allow":
-            actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  # 允許流量進行
+            dsc_mac = self.ip_mac_map[dst_ip]  # 針對 ip 取出 mac
+            out_port = self.host_ports[dsc_mac]  # 再針對 mac 取出 port            
+            # actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  # 允許流量進行
+            actions = [parser.OFPActionOutput(out_port)]
         elif action == "deny":
             actions = []  # 沒有動作，相當於丟棄該流量        
-        self.add_flow(datapath, 10, match, actions)
+        self.add_flow(datapath, 999, match, actions)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
@@ -221,8 +236,7 @@ class SimpleSwitchController(ControllerBase):
         for h in all_hosts:
             print(f"[TOPO] host MAC: {h.mac}, IPs: {h.ipv4}, port: {h.port}")
         # 將主機資訊轉換為 JSON 格式
-        body = json.dumps([host.to_dict() for host in all_hosts])
-        print(body)
+        body = json.dumps([host.to_dict() for host in all_hosts])        
         return Response(content_type='application/json; charset=utf-8', body=body)
     
      # 這裡是新增的 insert_policy API
@@ -231,10 +245,12 @@ class SimpleSwitchController(ControllerBase):
         # 解析 JSON       
         policy_data = json.loads(req.body)       
         print(json.dumps(policy_data, indent=4))
-        print(self.simpl_switch_spp.switches)
+       
         datapath = self.simpl_switch_spp.switches.get(8796758451869)
+        print(datapath)
         # 進行策略更新等
         update_acl_rules(policy_data)
+        
         # 策略應用
         self.simpl_switch_spp.setup_acl_rules(datapath)
         # 返回成功的回應

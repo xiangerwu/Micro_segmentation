@@ -52,6 +52,11 @@ def load_epg(ip):
 
 # 讀取 label.json 檔案的函數
 def load_labels(category):
+    with open('label.json', 'r') as file:
+        data = json.load(file)
+    
+    # 註解程式碼為從資料庫讀取
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     sqlstr = 'SELECT label_value FROM labels WHERE label_type_id IN (SELECT id FROM label_types WHERE type_name = %s);'
@@ -59,7 +64,8 @@ def load_labels(category):
     results = cursor.fetchall()
     conn.close()
     epg_values = {row[0] for row in results}
-    return list(epg_values)
+    """
+    return data.get(category)
 
 # 把資料插入到EPG之中
 def insert_epg(ip , info):   
@@ -145,7 +151,7 @@ def submit_labels():
     print(f"host_info: {ipv4}")
     print(f"Labels: {labels}")
     
-    insert_epg(ipv4 , labels) # 插入到資料庫理面
+    # insert_epg(ipv4 , labels) # 插入到資料庫理面
     
     new_data = {
         "ip": ipv4,
@@ -221,6 +227,7 @@ async def post_intent():
         return "Intent written to file.", 200
     else:
         print("Intent already exists.")
+        await transform_intent_to_dsl()
         return "Intent already exists.", 200
 
 # 取得所有DSL，用於前端面板模擬

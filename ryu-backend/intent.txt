@@ -1,2 +1,1 @@
-deny function:Service, ICMP:, function:Database 
 allow function:Web, ICMP:, function:Service 

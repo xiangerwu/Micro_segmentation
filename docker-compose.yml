@@ -10,22 +10,5 @@ services:
       - ./nginx/data:/data
       - ./nginx/letsencrypt:/etc/letsencrypts
 
-  ryu-db:
-    container_name: ryu-db
-    image: mysql:latest
-    restart: unless-stopped
-    ports:
-      - '3306:3306'    
-    expose:
-      - "3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=backend
-      - MYSQL_USER=user
-      - MYSQL_PASSWORD=password
-    volumes:
-      - "ryu-db:/var/lib/mysql"
-      - "./ryu-backend/db/01_label.sql:/docker-entrypoint-initdb.d/01_label.sql"
-
 volumes:
   ryu-db:

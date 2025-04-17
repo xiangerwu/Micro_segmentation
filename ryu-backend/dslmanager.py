@@ -115,7 +115,7 @@ async def transform_intent_to_dsl():
             allow = parts[0].split(" ")[0]
             protocol = parts[1].split(":")[0].strip()  # TCP or UDP or ICMP
             egressips = get_matching_ips(egresstype,egresslabel)
-           
+            print(egressips)
             ingressips = get_matching_ips(ingresstype,ingresslabel)
           
             port = parts[1].split(":")[1].strip()  # 3306  
@@ -124,9 +124,9 @@ async def transform_intent_to_dsl():
                 for ingress_ip in ingressips:                    
                     # 組合為需要的 DSL 格式
                     dsl_line = f"{allow}{{{protocol}, {egress_ip}, {ingress_ip} }},{{ {port}, ({egresstype}:{egresslabel}),({ingresstype}:{ingresslabel}) }}\n"
-                    
                     dsl_file.write(dsl_line)
     if protocol == 'ICMP' :
+        print("test")
         update_policy_to_ryu() # policy 更新到RyuController
     if protocol == 'TCP' :
         await update_policy_to_iptables() # policy 更新到iptables

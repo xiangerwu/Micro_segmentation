@@ -1,7 +1,8 @@
 {
-    "function": ["Null", "Web", "Service", "Database", "Honeypot"],
-    "priority": ["Null", "User", "Admin"],
+    "function": ["Null", "Web", "Service", "Database","Backend", "Honeypot"],
+    "priority": ["Null", "User", "Developer","Admin"],
     "type": ["Null", "Order", "Shipping", "Payment", "Management"],
-    "security": ["Null", "Normal", "Compromised"]
+    "application": ["Null", "ERP", "MRP","PLM","CAD"],
+    "environment": ["Null", "Production", "Testing","Staging", "Development"]    
 }
   

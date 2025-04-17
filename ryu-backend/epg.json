@@ -3,24 +3,24 @@
         "ip": "192.168.173.101",
         "function": "Web",
         "priority": "User",
-        "type": "Management",
-        "application": "MRP",
-        "environment": "production"
+        "type": "Shipping",
+        "application": "ERP",
+        "environment": "Testing"
     },
     {
         "ip": "192.168.173.102",
         "function": "Service",
         "priority": "User",
-        "type": "Management",
-        "application": "MRP",
-        "environment": "production"
+        "type": "Shipping",
+        "application": "ERP",
+        "environment": "Testing"
     },
     {
         "ip": "192.168.173.103",
         "function": "Database",
         "priority": "User",
-        "type": "Management",
-        "application": "PLM",
-        "environment": "development"
+        "type": "Shipping",
+        "application": "ERP",
+        "environment": "Testing"
     }
 ]
