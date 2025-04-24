@@ -37,8 +37,7 @@ def update_acl_rules(data):
             method = entry['method']
   
             # 根據 method（allow 或 deny）來生成規則
-            rule = f"{method} {protocol} from {egress_ip} to {ingress_ip}\n"
-            print(rule)
+            rule = f"{method} {protocol} from {egress_ip} to {ingress_ip}\n"            
             # 將規則寫入 acl_rules.txt
             acl_file.write(rule)
             
@@ -47,3 +46,26 @@ def update_acl_rules(data):
                 reverse_rule = f"{method} {protocol} from {ingress_ip} to {egress_ip}\n"
                 print(reverse_rule)
                 acl_file.write(reverse_rule)
+# 刪除ACL_rules 的規則
+def delete_acl_rules_byip(ip):   
+    with open("config/acl_rules.txt", "r") as acl_file:
+        lines = acl_file.readlines()
+    
+     # 過濾出不包含該 IP 的規則
+    new_lines = []
+    for line in lines:
+        # 忽略空白行或註解
+        if line.strip() == "" or line.strip().startswith("#"):
+            new_lines.append(line)
+            continue
+
+        # 若該行包含來源或目的 IP 為指定 IP，則跳過（刪除）
+        if ip in line:
+            continue
+        new_lines.append(line)
+
+    # 將過濾後的規則寫回原檔案
+    with open("config/acl_rules.txt", "w") as acl_file:
+        acl_file.writelines(new_lines)
+
+    print(f"[INFO] 已刪除來源或目的為 {ip} 的 ACL 規則")

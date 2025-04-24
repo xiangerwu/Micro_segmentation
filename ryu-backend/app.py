@@ -1,5 +1,5 @@
 from flask import Flask,jsonify,request
-from dslmanager import transform_intent_to_dsl
+from dslmanager import transform_intent_to_dsl,reevaluate_dsl,load_rpg
 from db import get_db_connection
 import json
 import re
@@ -32,74 +32,14 @@ def read_epg_json():
         print(f"Error reading {EPG_FILE}: {e}")
         return []
 
-# 查詢EPG
-def load_epg(ip):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    sqlstr = """
-        SELECT lt.type_name, l.label_value
-            FROM epg
-            LEFT JOIN label_types lt ON lt.id = epg.label_type_id
-            LEFT JOIN labels l ON l.id = epg.label_value_id
-            JOIN ep e ON e.id = epg.ip_id
-            WHERE e.ip = %s ;
-    """ 
-    cursor.execute(sqlstr,(ip,))
-    results = cursor.fetchall()
-    conn.close()
-    label_dict = {row[0]: row[1] for row in results}   
-    return label_dict
-
 # 讀取 label.json 檔案的函數
 def load_labels(category):
     with open('label.json', 'r') as file:
         data = json.load(file)
-    
-    # 註解程式碼為從資料庫讀取
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    sqlstr = 'SELECT label_value FROM labels WHERE label_type_id IN (SELECT id FROM label_types WHERE type_name = %s);'
-    cursor.execute(sqlstr, (category,))
-    results = cursor.fetchall()
-    conn.close()
-    epg_values = {row[0] for row in results}
-    """
     return data.get(category)
 
 # 把資料插入到EPG之中
 def insert_epg(ip , info):   
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    sqlstr = "SELECT id FROM ep WHERE ip = %s"
-    cursor.execute(sqlstr,(ip,))
-    results = cursor.fetchall()
-    if results == []:
-        sqlstr = "INSERT INTO ep(ip) values (%s)"
-        cursor.execute(sqlstr,(ip,))
-        conn.commit()
-    
-    for label_type, label_value in info.items():
-        if label_value == "" :
-            label_value = "Null"
-        sqlstr = """
-            SELECT lt.id AS label_type_id, l.id AS label_value_id
-            FROM label_types lt
-            JOIN labels l ON l.label_type_id = lt.id
-            WHERE lt.type_name = %s
-            AND l.label_value = %s;
-        """
-        cursor.execute(sqlstr, (label_type, label_value))
-        label_type_id, label_value_id = cursor.fetchone()
-        sqlstr = """
-            INSERT INTO epg (ip_id, label_type_id, label_value_id)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE label_value_id = VALUES(label_value_id);
-        """       
-        cursor.execute(sqlstr, (results[0][0], label_type_id, label_value_id,))
-        conn.commit()
-    conn.close()
-    
     # 🔽 寫入epg.json
     new_entry = {
         "ip": ip,
@@ -135,9 +75,9 @@ def get_label(category):
     labels = load_labels(category)
     return jsonify(labels)
     
-# 為 IP 去填上標籤，組成EPG
+# 為 IP 去填上標籤，組成RPG
 @app.route('/datacenter/submit_labels', methods=['POST'])
-def submit_labels():
+async def submit_labels():
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -145,14 +85,9 @@ def submit_labels():
     # 提取 host 資料
     host_info = data.get("hostInfo", {})
     ipv4 = host_info.get('ipv4', 'N/A')[0]
+    print(ipv4)
     labels = data.get('labels', {})
 
-    # 打印或儲存資料
-    print(f"host_info: {ipv4}")
-    print(f"Labels: {labels}")
-    
-    # insert_epg(ipv4 , labels) # 插入到資料庫理面
-    
     new_data = {
         "ip": ipv4,
         "function": labels.get("function", "Null"),
@@ -161,34 +96,57 @@ def submit_labels():
         "application": labels.get("application", "Null"),
         "environment" : labels.get("environment","Null")
     }
-    
+    label_changed = False
     try:
-        with open('epg.json', 'r') as file:
+        with open('epg_case_1.json', 'r') as file:
             epg_data = json.load(file)
     except FileNotFoundError:
         # 如果檔案不存在，初始化為空列表
         epg_data = []
     ip_found = False
+    ip_found = False
+    
+   
+    diff_labels = {}
+    index = 0
+    
     for entry in epg_data:        
-        if entry['ip'] == ipv4:
+        if entry['ip'] == ipv4:            
+            ip_found = True
+            for key in new_data:
+                old_val = entry.get(key)
+                new_val = new_data[key]
+                if old_val != new_val:
+                    diff_labels[index] = {"before": old_val, "after": new_val}
+                    index = index + 1
+                    label_changed = True # 標籤有變更
+                    break
             entry.update(new_data)  # 如果 IP 存在，更新該條目
             ip_found = True
             break
     if not ip_found:
         epg_data.append(new_data)
+        label_changed = True # 標籤有變更
         
     # 將更新後的資料寫回 epg.json
-    with open('epg.json', 'w') as file:
+    with open('epg_case_1.json', 'w') as file:        
         json.dump(epg_data, file, indent=4)
+    
+    # DSL 有改變，需重新評估
+    if label_changed:
+       print(f"🔁 {ipv4} Label has changed, triggering DSL reevaluation")
+       print(f"🔁 {ipv4} diff_labels: {diff_labels}")
+       await reevaluate_dsl(ipv4,diff_labels) 
 
     return jsonify({"status": "success", "message": "Labels received and processed."})
 
 # 查詢特定RP中的RPG內容
 @app.route('/datacenter/epg/<ip>', methods=['GET'])
 def get_epg(ip):
-    epg_values = load_epg(ip)
+    epg_values = load_rpg(ip)
     return jsonify(epg_values)
 
+# 意圖增加
 ''' 
   { 
     "method" : "allow",
@@ -210,25 +168,17 @@ async def post_intent():
     protocol = data.get('protocol','') # TCP、UDP、ICMP
     ingresstype = data.get('ingresstype','') #  value
     ingress = data.get('ingress','') #function, type, environment, application .. etc
-    port = data.get('port') # 3306,22,80..etc..  
+    port = data.get('port','') # 3306,22,80..etc..  
     
-    new_entry = f"{method} {egress}:{egresstype}, {protocol}:{port}, {ingress}:{ingresstype} \n"     
-    
-    try:
-        with open('intent.txt', 'r') as file:
-            existing_lines = file.readlines()
-    except FileNotFoundError:
-        existing_lines = []
-    
-    if new_entry not in existing_lines:
-        with open('intent.txt', 'a') as file:
-            file.write(new_entry)
-        await transform_intent_to_dsl()
-        return "Intent written to file.", 200
-    else:
-        print("Intent already exists.")
-        await transform_intent_to_dsl()
-        return "Intent already exists.", 200
+    new_entry = f"{method} {egresstype}:{egress}, {protocol}:{port}, {ingresstype}:{ingress} \n"     
+    print("插入的意圖為")
+    print(new_entry)
+    # 將意圖寫入 intent.txt
+    with open('intent.txt', 'a') as intent_file:
+        intent_file.write(new_entry)    
+
+    await transform_intent_to_dsl(new_entry) # intent 轉換成DSL
+    return "Intent deployed success.", 200
 
 # 取得所有DSL，用於前端面板模擬
 @app.route('/datacenter/dsl', methods=['GET'])

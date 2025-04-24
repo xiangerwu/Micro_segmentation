@@ -48,43 +48,34 @@ Python 環境 : conda test_env
   python custom_topo.py
 ```
 
+## 情境
+1. 開發新的ERP模組，開發測試環境通過驗證，今天開始遷移上部屬正式提供服務
 
-## POST 測試
+先執行 case/custom_topo_case1.py 建立host 以及設定網路環境
+接著執行intent_case_1.py 建立基本intent
+最後執行intent_case_1_labelchange.py 把label 值做改變
 
-### 測試SDN 的policy
+## 常用語法
 
-* ICMP
-
-    epg.json
-    ```json
-        {
-            "IP": "192.168.173.101",
-            "function": "Service",
-            "Priority": "User",
-            "Type": "Shipping",
-            "Security": "Normal"
-        },
-        {
-            "IP": "192.168.173.103",
-            "function": "Database",
-            "Priority": "User",
-            "Type": "Shipping",
-            "Security": "Normal"
-        }
-    ```
-  
-  ```
-   POST http://sdn.yuntech.poc.com/datacenter/intent
-   {
-        "method" : "deny",
-        "egress" : "Service",
-        "egresstype" : "function",
-        "port" : "",
-        "protocol" : "ICMP",
-        "ingress" : "Database",
-        "ingresstype" : "function"
-    }
-  ```
+* 查看流表規則
+```
+ ovs-ofctl dump-flows ovsbr0
+```
+* 刪除現有的所有流表規則
+```
+ovs-ofctl del-flows ovsbr0
+```
+* 把 .19 、 .24 以外的規則全數刪除(怕刪不乾淨使用)
+```
+ovs-ofctl dump-flows ovsbr0 | grep -E "nw_(src|dst)=" | grep -v "nw_src=192.168.173.19" | grep -v "nw_dst=192.168.173.19" | grep -v "nw_src=192.168.173.24" | grep -v "nw_dst=192.168.173.24" | while read line; do
+    match=$(echo "$line" | sed -n 's/.* table=0, \(.*\) actions=.*/\1/p')
+    echo "ovs-ofctl --strict del-flows ovsbr0 \"$match\""
+    ovs-ofctl --strict del-flows ovsbr0 "$match"
+done
+```
+* 用 nc 驗證TCP
+```
+  h2 nc -l -p 3306 > /tmp/h2_3306.log 2>&1 &
+```
 
 
-### 測試 iptables 的 policy 

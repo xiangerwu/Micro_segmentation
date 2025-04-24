@@ -1,14 +1,22 @@
 [
     {
         "ip": "192.168.173.101",
-        "function": "Web",
-        "priority": "User",
-        "type": "Shipping",
-        "application": "ERP",
+        "function": "Null",
+        "priority": "Null",
+        "type": "Order",
+        "application": "Null",
         "environment": "Testing"
     },
     {
         "ip": "192.168.173.102",
+        "function": "Database",
+        "priority": "Null",
+        "type": "Payment",
+        "application": "Null",
+        "environment": "Testing"
+    },
+    {
+        "ip": "192.168.173.103",
         "function": "Web",
         "priority": "Null",
         "type": "Shipping",
@@ -16,10 +24,10 @@
         "environment": "Production"
     },
     {
-        "ip": "192.168.173.103",
+        "ip": "192.168.173.104",
         "function": "Database",
         "priority": "Null",
-        "type": "Payment",
+        "type": "Shipping",
         "application": "Null",
         "environment": "Production"
     }

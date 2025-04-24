@@ -19,7 +19,7 @@ async def handle_message(websocket):
                 rule = {
                     'protocol': data[0]["protocol"],
                     'src' : data[0]['egress_ip'].split(",")[0],
-                    'target' : 'ACCEPT' if data[0]["method"].lower() == "allow" else 'DROP',                    
+                    'target' : 'ACCEPT' if data[0]["method"].lower() == "allow" else 'REJECT',                    
                 }
                 
                 if data[0]["protocol"].lower() == "tcp":

@@ -12,7 +12,7 @@ from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
 from ryu.app.wsgi import ControllerBase, WSGIApplication, route
 from ryu.lib import dpid as dpid_lib
-from acl_rules import parse_acl, update_acl_rules
+from acl_rules import parse_acl, update_acl_rules, delete_acl_rules_byip
 from ryu.topology.api import get_host  # 引入拓撲 API
 from ryu.topology import switches
 
@@ -44,6 +44,7 @@ class SimpleSwitchRest13(app_manager.RyuApp):
             "192.168.173.101": "00:00:00:00:00:01",  # h1
             "192.168.173.102": "00:00:00:00:00:02",  # h2
             "192.168.173.103": "00:00:00:00:00:03",  # h3
+            "192.168.173.104": "00:00:00:00:00:04",  # h3
         }
         self.host_ports = {
             "08:00:27:a9:a6:9d": 1,  # Mininet
@@ -51,6 +52,7 @@ class SimpleSwitchRest13(app_manager.RyuApp):
             "00:00:00:00:00:01": 2,  # h1
             "00:00:00:00:00:02": 3,  # h2
             "00:00:00:00:00:03": 4,  # h3
+            "00:00:00:00:00:04": 5,  # h4
         }
         wsgi.register(SimpleSwitchController, {simple_switch_instance_name: self})
 
@@ -60,8 +62,7 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         
         self.switches[datapath.id] = datapath
         
-        dpid = datapath.id 
-        print(dpid)
+        dpid = datapath.id         
         self.mac_to_port.setdefault(datapath.id, {})
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -70,43 +71,6 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         match = parser.OFPMatch()  # 匹配所有
         actions = []
         self.add_flow(datapath, 0, match, actions)
-        #  ARP 泛洪規則
-        match = parser.OFPMatch(eth_type=0x0806)
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
-        self.add_flow(datapath, 200, match, actions)
-
-        
-        # 4️⃣ 所有 host 列表（後面迴圈要用）
-        hosts = ["192.168.173.101", "192.168.173.102", "192.168.173.103"]   
-        
-        for host_ip in hosts:
-            host_mac = self.ip_mac_map[host_ip]  #針對 ip 取出 mac
-            host_port = self.host_ports[host_mac] # 再針對mac 取出port
-            
-            # 允許 24 → host
-            match = parser.OFPMatch(eth_type=0x0800, ipv4_src=host_ip, ipv4_dst="192.168.173.19")
-            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)] 
-            self.add_flow(datapath, 100, match, actions)          
-
-            match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.19", ipv4_dst=host_ip)
-            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
-            self.add_flow(datapath, 100, match, actions)
-            
-            match = parser.OFPMatch(eth_type=0x0806, ipv4_src=host_ip, ipv4_dst="192.168.173.19")
-            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
-            self.add_flow(datapath, 100, match, actions)
-            
-            match = parser.OFPMatch(eth_type=0x0806, ipv4_src="192.168.173.19", ipv4_dst=host_ip)
-            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
-            self.add_flow(datapath, 100, match, actions)
-            
-            match = parser.OFPMatch(eth_type=0x88cc, ipv4_src="192.168.173.19", ipv4_dst=host_ip)
-            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
-            self.add_flow(datapath, 100, match, actions)
-            
-            match = parser.OFPMatch(eth_type=0x88cc, ipv4_src=host_ip, ipv4_dst="192.168.173.19")
-            actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
-            self.add_flow(datapath, 100, match, actions)
         
         match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.24", ipv4_dst="192.168.173.19")
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
@@ -115,6 +79,48 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.19", ipv4_dst="192.168.173.24")
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
         self.add_flow(datapath, 100, match, actions)
+        
+        #  ARP 泛洪規則
+        match = parser.OFPMatch(eth_type=0x0806)
+        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+        self.add_flow(datapath, 200, match, actions)
+
+        
+        # 4️⃣ 所有 host 列表（後面迴圈要用）
+        hosts = ["192.168.173.101", "192.168.173.102", "192.168.173.103","192.168.173.104"]   
+        admin_hosts = ["192.168.173.19" , "192.168.173.24"]
+        
+        for host_ip in hosts:
+            for admin_ip in admin_hosts:
+                host_mac = self.ip_mac_map[host_ip]  #針對 ip 取出 mac
+                host_port = self.host_ports[host_mac] # 再針對mac 取出port
+                
+                # 允許 24 → host
+                match = parser.OFPMatch(eth_type=0x0800, ipv4_src=host_ip, ipv4_dst=admin_ip)
+                actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)] 
+                self.add_flow(datapath, 100, match, actions)          
+
+                match = parser.OFPMatch(eth_type=0x0800, ipv4_src=admin_ip, ipv4_dst=host_ip)
+                actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+                self.add_flow(datapath, 100, match, actions)
+                
+                match = parser.OFPMatch(eth_type=0x0806, ipv4_src=host_ip, ipv4_dst=admin_ip)
+                actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+                self.add_flow(datapath, 100, match, actions)
+                
+                match = parser.OFPMatch(eth_type=0x0806, ipv4_src=admin_ip, ipv4_dst=host_ip)
+                actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+                self.add_flow(datapath, 100, match, actions)
+                
+                match = parser.OFPMatch(eth_type=0x88cc, ipv4_src=admin_ip, ipv4_dst=host_ip)
+                actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
+                self.add_flow(datapath, 100, match, actions)
+                
+                match = parser.OFPMatch(eth_type=0x88cc, ipv4_src=host_ip, ipv4_dst=admin_ip)
+                actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+                self.add_flow(datapath, 100, match, actions)
+        
+       
     
         # 載入 其他 DSL 規則 
         self.setup_acl_rules(datapath)
@@ -140,6 +146,32 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         for rule in dsl_rules:
             rule = rule.strip().split(" ")         
             self.setup_flow_for_acl(datapath, rule)
+    # 刪除特定IP的所有flows
+    def delete_flows_by_ip(self, datapath, ip):
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+
+        # 刪除所有與特定IP相關的flows
+        matches = [
+            parser.OFPMatch(eth_type=0x0800, ipv4_src=ip),
+            parser.OFPMatch(eth_type=0x0800, ipv4_dst=ip),
+        ]
+        excluded_ips = ["192.168.173.19", "192.168.173.24"]
+        
+        for match in matches:
+            for excluded_ip in excluded_ips:
+                # 避免刪除 src=ip, dst=excluded 或 dst=ip, src=excluded 的 flow
+                if match.get("ipv4_dst") == excluded_ip or match.get("ipv4_src") == excluded_ip:
+                    continue
+            mod = parser.OFPFlowMod(
+                datapath=datapath,
+                command=ofproto.OFPFC_DELETE,
+                out_port=ofproto.OFPP_ANY,
+                out_group=ofproto.OFPG_ANY,
+                match=match
+            )
+            datapath.send_msg(mod)
+            self.logger.info(f"🔻 Deleted flow for IP match: {match}")
 
     def setup_flow_for_acl(self, datapath, parsed_rule):
         parser = datapath.ofproto_parser
@@ -247,15 +279,26 @@ class SimpleSwitchController(ControllerBase):
         print(json.dumps(policy_data, indent=4))
        
         datapath = self.simpl_switch_spp.switches.get(8796758451869)
-        print(datapath)
         # 進行策略更新等
         update_acl_rules(policy_data)
-        
         # 策略應用
         self.simpl_switch_spp.setup_acl_rules(datapath)
         # 返回成功的回應
         return Response(content_type='application/json; charset=utf-8', body=json.dumps({"status": "success"}))
 
-
+    # 指定刪除特定IP的policy 
+    @route('delete_policy', '/ryu/delete/policy/', methods=['POST'])
+    def delete_policy(self, req,  **kwargs):
+        body = req.body.decode('utf-8')
+        data = json.loads(body)
+        rules = data.get("rules", [])
+        ip = data.get("ip", None)    
+        print(f"刪除的ip為{ip}")
+        print(f"要刪除的DSL為: {rules}")
+        datapath = self.simpl_switch_spp.switches.get(8796758451869)
+        self.simpl_switch_spp.delete_flows_by_ip(datapath, ip) # 刪除SDN層rules 
+        delete_acl_rules_byip(ip) # 刪除DSL層的rules
+        # 返回成功的回應
+        return Response(content_type='application/json; charset=utf-8', body=json.dumps({"status": "success"}))
        
 

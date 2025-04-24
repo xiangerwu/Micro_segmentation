@@ -1,1 +1,13 @@
-allow{ICMP, 192.168.173.101, 192.168.173.102 },{ , (function:Web),(function:Service) }
+deny{TCP, 192.168.173.102, 192.168.173.103 },{ 3306, (environment:Testing),(environment:Production) }
+deny{TCP, 192.168.173.102, 192.168.173.104 },{ 3306, (environment:Testing),(environment:Production) }
+allow{ICMP, 192.168.173.103, 192.168.173.104 },{ , (environment:Production),(type:Shipping) }
+allow{ICMP, 192.168.173.104, 192.168.173.103 },{ , (environment:Production),(type:Shipping) }
+allow{ICMP, 192.168.173.104, 192.168.173.103 },{ , (environment:Production),(function:Web) }
+allow{TCP, 192.168.173.103, 192.168.173.102 },{ 3306, (function:Web),(function:Database) }
+allow{TCP, 192.168.173.103, 192.168.173.104 },{ 3306, (function:Web),(function:Database) }
+deny{TCP, 192.168.173.101, 192.168.173.103 },{ 3306, (environment:Testing),(environment:Production) }
+deny{TCP, 192.168.173.101, 192.168.173.104 },{ 3306, (environment:Testing),(environment:Production) }
+allow{ICMP, 192.168.173.102, 192.168.173.101 },{ , (environment:Testing),(type:Order) }
+allow{ICMP, 192.168.173.101, 192.168.173.102 },{ , (environment:Testing),(type:Payment) }
+allow{TCP, 192.168.173.101, 192.168.173.102 },{ 3306, (type:Order),(function:Database) }
+allow{TCP, 192.168.173.101, 192.168.173.104 },{ 3306, (type:Order),(function:Database) }

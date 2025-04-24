@@ -93,7 +93,7 @@ function HostsTable() {
       hostInfo: host,
       labels: labelsForHost,
     };
-
+    console.log(payload)
     fetch("http://sdn.yuntech.poc.com/datacenter/submit_labels", {
       method: "POST",
       headers: {
