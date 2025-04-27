@@ -5,7 +5,7 @@
         "priority": "Null",
         "type": "Order",
         "application": "Null",
-        "environment": "Testing"
+        "environment": "Production"
     },
     {
         "ip": "192.168.173.102",

@@ -194,6 +194,7 @@ def get_all_dsl():
                 action = match.group(1)  # 'deny' 或 'allow'
                 protocol = match.group(2)  # 協定類型，如 TCP, UDP, ICMP
                 ip_addresses = match.group(3).split(',')  # 擷取所有 IP 地址
+                
                 labels_in_line = match.group(4).split(',')  # 擷取所有標籤
                 # 去除多餘的括號和冒號，並取得標籤的值
                 def extract_label(label):
@@ -202,30 +203,38 @@ def get_all_dsl():
                     if match:
                         return match.group(1).lower(), match.group(2).lower()  # 返回標籤值並轉為小寫
                     return label.strip().lower(), label.strip().lower()   # 如果沒有匹配，直接返回小寫標籤值
-                source_label_type,source_label = extract_label(labels_in_line[1])
-                function_labels.add((source_label_type,source_label))
+                source_label_type,source_label = extract_label(labels_in_line[1])               
                 target_label_type,target_label = extract_label(labels_in_line[2])
-                function_labels.add((target_label_type,target_label))
+                
+                function_labels.add((source_label_type,source_label)) # 來源端 label 
+                function_labels.add((target_label_type,target_label)) # 目的端label
                 label = protocol + labels_in_line[0]
+                                 
                 edges.append({
-                        "id": f"e{line_counter}-2",
-                        "source": source_label,  # 使用 source_label 這裡直接使用標籤名
-                        "target": target_label,  # 使用 target_label 這裡直接使用標籤名
-                        "label": label,
-                        "action" : action
+                    "id": f"e{line_counter}-2",
+                    "source": source_label,  # 使用 source_label 這裡直接使用標籤名
+                    "target": target_label,  # 使用 target_label 這裡直接使用標籤名
+                    "label": label,        
+                    "action" : action
                 })
                 line_counter += 1
             
 
     node_data = []
     label_map = {} 
-    for idx, (label_type, label_value) in enumerate(function_labels, start=1):
+    seen = set()  # 用來記錄已經出現過的 (label_type, label_value, ip)
+    for label_type, label_value in function_labels :
+        key = (label_type, label_value)
+        if key in seen:
+            continue  # 如果重複就跳過，不要增加 idx
+        seen.add(key)
+        idx = len(node_data) + 1 # 動態根據目前有多少個 node_data 來編 idx
         node_data.append({
             "id": str(idx),
             "type": label_type,
             "label":label_value  # 按要求轉小寫
         })
-        label_map[label_value] = str(idx)  # 建立標籤到 ID 的映射
+        label_map[label_value] = str(idx)  # 建立標籤到 ID 的映射    
      # 使用標籤映射將 source 和 target 轉換為 ID
     for edge in edges:
         edge["source"] = label_map.get(edge["source"], edge["source"])  # 查找 source 標籤對應的 ID
@@ -237,7 +246,8 @@ def get_all_dsl():
     }
     return  jsonify(data)
     
-
+# 不確定有沒有用到 
+# 神秘的URL
 @app.route('/datacenter/dsl/ryu', methods=['GET'])
 def get_dsl_ryu():
     result = []

@@ -24,7 +24,7 @@ data = {
         "priority" : "Null",
         "type": "Order",
         "application": "Null",
-        "environment" : "Testing"
+        "environment" : "Production"
     }    
 }
 response = requests.post(url, json=data)

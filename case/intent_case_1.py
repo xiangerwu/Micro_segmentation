@@ -10,7 +10,80 @@ url = "http://sdn.yuntech.poc.com/datacenter/intent"
 RED = '\033[91m'
 RESET = '\033[0m'
 GREEN = '\033[92m'
+YELLOW = '\033[93m'
 
+# 初始化 RPG ==>  初始化
+data = {
+    "hostInfo" : {
+        "ipv4" : ["192.168.173.101",]
+    },
+    "labels" : {
+        "function" : "Null",
+        "priority" : "Null",
+        "type": "Order",
+        "application": "Null",
+        "environment" : "Testing"
+    }    
+}
+response = requests.post(url, json=data)
+if response.status_code == 200:
+    print(f" {YELLOW}初始化{RESET} h1 初始化 (type:Order,environment:Testing) ✅")
+else :
+    print(f" {YELLOW}初始化{RESET} h1 初始化 (type:Order,environment:Testing) ❌")
+
+data = {
+    "hostInfo" : {
+        "ipv4" : ["192.168.173.102",]
+    },
+    "labels" : {
+        "function" : "Database",
+        "priority" : "Null",
+        "type": "Payment",
+        "application": "Null",
+        "environment" : "Testing"
+    }    
+}
+response = requests.post(url, json=data)
+if response.status_code == 200:
+    print(f" {YELLOW}初始化{RESET} h2 初始化 (function:Database,type:Payment,environment:Testing) ✅")
+else :
+    print(f" {YELLOW}初始化{RESET} h2 初始化 (function:Database,type:Payment,environment:Testing) ❌")
+    
+data = {
+    "hostInfo" : {
+        "ipv4" : ["192.168.173.103",]
+    },
+    "labels" : {
+        "function" : "Web",
+        "priority" : "Null",
+        "type": "Shipping",
+        "application": "Null",
+        "environment" : "Production"
+    }    
+}
+response = requests.post(url, json=data)
+if response.status_code == 200:
+    print(f" {YELLOW}初始化{RESET} h3 初始化 (function:Web,type:Shipping,environment:Testing) ✅")
+else :
+    print(f" {YELLOW}初始化{RESET} h3 初始化 (function:Web,type:Shipping,environment:Testing) ❌")
+    
+data = {
+    "hostInfo" : {
+        "ipv4" : ["192.168.173.104",]
+    },
+    "labels" : {
+        "function" : "Database",
+        "priority" : "Null",
+        "type": "Shipping",
+        "application": "Null",
+        "environment" : "Production"
+    }    
+}
+response = requests.post(url, json=data)
+if response.status_code == 200:
+    print(f" {YELLOW}初始化{RESET} h4 初始化 (function:Database,type:Shipping,environment:Production) ✅")
+else :
+    print(f" {YELLOW}初始化{RESET} h4 初始化 (function:Database,type:Shipping,environment:Production) ❌")
 
 # Deny 策略
 # 1. Environment: Testing ===TCP 3306 ===> Environment : Production

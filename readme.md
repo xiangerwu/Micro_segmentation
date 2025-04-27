@@ -52,7 +52,13 @@ Python 環境 : conda test_env
 ## 情境
 1. 開發新的ERP模組，開發測試環境通過驗證，今天開始遷移上部屬正式提供服務
 
-先執行 case/custom_topo_case1.py 建立host 以及設定網路環境
+h1、h2 環境皆是測試環境(environment:testing)
+h3、h4 環境則是生產環境(environment:production)
+
+兩個環境無法透過TCP3306溝通，表示兩個獨立環境。
+需求中h1的label會調整成production，觸發微分段邏輯，驗證h1可以與生產環境溝通
+
+先執行 case/custom_topo_case1.py 建立host、初始化RPG 以及設定網路環境
 接著執行intent_case_1.py 建立基本intent
 最後執行intent_case_1_labelchange.py 把label 值做改變
 

@@ -61,7 +61,7 @@ function IntentChart() {
 
           //const edgesResponse = await fetch('/data/edges.json');
           //const edgesData = await edgesResponse.json();
-         
+          // edge的部分
           const updatedEdges = ResJson.edges.map(edge => ({
             id: edge.id,
             source: edge.source,
@@ -80,13 +80,15 @@ function IntentChart() {
 
   },[setNodes,setEdges])
   
+  // Render node labels
+  // 這裡可以根據需要自定義節點的標籤渲染
   const nodeLabelRenderer = (node) => {
-    const { label, fun , type , security , priority } = node.data;
+    const { label, type  } = node.data;
 
     return (
-      <div style={{ textAlign: "center" }}>
-        <div>{label}</div>
-        <Flex>            
+      <div style={{ textAlign: "center" , justifyContent: "center" }}>
+        <div>{label}</div>        
+        <Flex align="center" justify="center" mt="5px">            
             <Tag size="sm" variant="solid" colorScheme="blue" mr="5px">{type}</Tag>       
         </Flex>
       </div>
