@@ -13,7 +13,8 @@ ryu-project (SDN Controller)
 主要是前者維護
 * nginx 反向代理 :
 [sdn](http://sdn.yuntech.poc.com/)
-
+## 橋接方法
+https://hackmd.io/Gph1uzqZSNOTftnL287tHg
 ## NGINX  
 使用nginx-proxy manager
 
