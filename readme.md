@@ -49,14 +49,14 @@ SDC URL記得去DNS 或 hosts上設置
 
 ## 專案執行前
 
-清空以下紀錄
+1. 清空以下紀錄
 
 *  /ryu-project/config/acl_rules.txt
 *  /ryu-backend/log.txt
 *  /ryu-backend/intent.txt
 *  /ryu-backend/dsl.txt
 
-* 把 .19 、 .24 以外的規則全數刪除(怕刪不乾淨使用，這兩台IP 為你的VM IP 以及你的電腦IP)
+2. 把 .19 、 .24 以外的規則全數刪除(怕刪不乾淨使用，這兩台IP 為你的VM IP 以及你的電腦IP)
 ```
 ovs-ofctl dump-flows ovsbr0 | grep -E "nw_(src|dst)=" | grep -v "nw_src=192.168.173.19" | grep -v "nw_dst=192.168.173.19" | grep -v "nw_src=192.168.173.24" | grep -v "nw_dst=192.168.173.24" | while read line; do
     match=$(echo "$line" | sed -n 's/.* table=0, \(.*\) actions=.*/\1/p')
