@@ -1,15 +1,20 @@
 from flask import Flask,jsonify,request
 from dslmanager import transform_intent_to_dsl,reevaluate_dsl,load_rpg
+from host_even_receiver import launch_ws_server
+import threading
 from db import get_db_connection
+from dotenv import load_dotenv
 import json
 import re
 import asyncio
+import os 
 app = Flask(__name__)
 
+load_dotenv()
 
 # 模擬讀取 intent.txt 和 epg.json 的路徑
 INTENT_FILE = 'intent.txt'
-EPG_FILE = 'epg.json'
+RPG_FILE = os.getenv('RPG_FILE', 'rpg_case_1.json')
 
 
 # 讀取 intent.txt
@@ -25,11 +30,11 @@ def read_intent_file():
 # 讀取 epg.json
 def read_epg_json():
     try:
-        with open(EPG_FILE, 'r') as file:
+        with open(RPG_FILE, 'r') as file:
             epg_data = json.load(file)
         return epg_data
     except Exception as e:
-        print(f"Error reading {EPG_FILE}: {e}")
+        print(f"Error reading {RPG_FILE}: {e}")
         return []
 
 # 讀取 label.json 檔案的函數
@@ -50,7 +55,7 @@ def insert_epg(ip , info):
         "environment": info.get("environment", "Null")
     }
     try:
-        with open('epg.json', 'r') as file:
+        with open(RPG_FILE, 'r') as file:
             epg_data = json.load(file)
     except FileNotFoundError:
         epg_data = []
@@ -65,7 +70,7 @@ def insert_epg(ip , info):
     if not updated:
         epg_data.append(new_entry)
 
-    with open('epg.json', 'w') as file:
+    with open(RPG_FILE, 'w') as file:
         json.dump(epg_data, file, indent=4)
     
 
@@ -85,7 +90,9 @@ async def submit_labels():
     # 提取 host 資料
     host_info = data.get("hostInfo", {})
     ipv4 = host_info.get('ipv4', 'N/A')[0]
-    print(ipv4)
+    print(f"建立{ipv4} 的RPG")
+    if ipv4 == 'N':
+        return jsonify({"error": "No valid IP address provided"}), 400
     labels = data.get('labels', {})
 
     new_data = {
@@ -94,18 +101,17 @@ async def submit_labels():
         "priority": labels.get("priority", "Null"),
         "type": labels.get("type", "Null"),
         "application": labels.get("application", "Null"),
-        "environment" : labels.get("environment","Null")
+        "environment" : labels.get("environment","Null"),
+        "security" : labels.get("security","Null")
     }
     label_changed = False
     try:
-        with open('epg_case_1.json', 'r') as file:
+        with open(RPG_FILE, 'r') as file:
             epg_data = json.load(file)
     except FileNotFoundError:
         # 如果檔案不存在，初始化為空列表
         epg_data = []
     ip_found = False
-    ip_found = False
-    
    
     diff_labels = {}
     index = 0
@@ -129,7 +135,7 @@ async def submit_labels():
         label_changed = True # 標籤有變更
         
     # 將更新後的資料寫回 epg.json
-    with open('epg_case_1.json', 'w') as file:        
+    with open('epg_case_3.json', 'w') as file:        
         json.dump(epg_data, file, indent=4)
     
     # DSL 有改變，需重新評估
@@ -186,6 +192,32 @@ def get_all_dsl():
     function_labels = set()
     edges = []
     line_counter = 1
+    with open('intent.txt', 'r') as intent_file:
+        for line in intent_file:
+            parts = line.strip().split(',')
+            action_label = parts[0].strip().split(' ')
+            action = action_label[0].lower()  # deny or allow
+            source_label = action_label[1].strip().lower()
+            
+            protocol_port = parts[1].strip().lower()
+            if ':' in protocol_port:
+                protocol, port = protocol_port.split(':', 1)
+            else:
+                protocol, port = protocol_port, ''
+            target_label = parts[2].strip().lower()
+             # 收集節點
+            function_labels.add(source_label)
+            function_labels.add(target_label) 
+            label = protocol.upper() +" " +  port
+            edges.append({
+                "id": f"e{line_counter}-2",
+                "source": source_label,
+                "target": target_label,
+                "label": label,
+                "action": action
+            })
+            line_counter += 1
+    """
     with open('dsl.txt', 'r') as dsl_file:
         for line in dsl_file:          
             # 正則表達式：擷取 deny/allow, 協定類型, 端口號和標籤
@@ -245,7 +277,38 @@ def get_all_dsl():
         "edges" : edges
     }
     return  jsonify(data)
-    
+    """
+    node_data = []
+    label_map = {}
+    seen = set()
+    for label_value in function_labels:
+        if label_value in seen:
+            continue
+        seen.add(label_value)
+        idx = len(node_data) + 1
+        # 自動判斷 type（根據冒號前的字）
+        if ':' in label_value:
+            label_type, label_real = label_value.split(':', 1)
+        else:
+            label_type, label_real = 'unknown', label_value
+
+        node_data.append({
+            "id": str(idx),
+            "type": label_type,
+            "label": label_real
+        })
+        label_map[label_value] = str(idx)
+
+    # 把 source / target 轉成 ID
+    for edge in edges:
+        edge["source"] = label_map.get(edge["source"], edge["source"])
+        edge["target"] = label_map.get(edge["target"], edge["target"])
+
+    data = {
+        "nodes": node_data,
+        "edges": edges
+    }
+    return jsonify(data)
 # 不確定有沒有用到 
 # 神秘的URL
 @app.route('/datacenter/dsl/ryu', methods=['GET'])
@@ -273,7 +336,9 @@ def get_dsl_ryu():
             result.append(rule)
     return jsonify(result)
     
-    
+# ✅ 在 Flask 主程式之前就啟動 WebSocket Server（背景執行）
+ws_thread = threading.Thread(target=launch_ws_server, daemon=True)
+ws_thread.start()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=5000,debug=True)
+    app.run(host='0.0.0.0',port=5000,debug=False)

@@ -1,6 +1,9 @@
 import json
 import logging
+import os 
+from dotenv import load_dotenv
 from webob import Response  # 加入這行來匯入 Response
+
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event
@@ -16,6 +19,22 @@ from acl_rules import parse_acl, update_acl_rules, delete_acl_rules_byip
 from ryu.topology.api import get_host  # 引入拓撲 API
 from ryu.topology import switches
 
+load_dotenv()
+
+VM_IP = os.getenv("VM_IP", "")
+VM_MAC = os.getenv("VM_MAC", "")
+USER_IP = os.getenv("USER_IP", "")
+USER_MAC = os.getenv("USER_MAC", "")
+HOST1_IP = os.getenv("HOST1_IP", "")
+HOST2_IP = os.getenv("HOST2_IP", "")
+HOST3_IP = os.getenv("HOST3_IP", "")
+HOST4_IP = os.getenv("HOST4_IP", "")
+
+HOST1_MAC = os.getenv("HOST1_MAC", "00:00:00:00:00:01")
+HOST2_MAC = os.getenv("HOST2_MAC", "00:00:00:00:00:02")
+HOST3_MAC = os.getenv("HOST3_MAC", "00:00:00:00:00:03")
+HOST4_MAC = os.getenv("HOST4_MAC", "00:00:00:00:00:04")
+DPID=os.getenv("DPID", 8796758451869) # 8796758451869 = 0x7f0000000001
 
 simple_switch_instance_name = 'simple_switch_api_app'
 
@@ -39,20 +58,20 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         wsgi = kwargs['wsgi']
         self.switches = {}
         self.ip_mac_map = {
-             "192.168.173.19": "08:00:27:a9:a6:9d", # Mininet
-            "192.168.173.24": "0a:00:27:00:00:07",  # Gateway            
-            "192.168.173.101": "00:00:00:00:00:01",  # h1
-            "192.168.173.102": "00:00:00:00:00:02",  # h2
-            "192.168.173.103": "00:00:00:00:00:03",  # h3
-            "192.168.173.104": "00:00:00:00:00:04",  # h3
+            VM_IP : VM_MAC, # Mininet
+            USER_IP: USER_MAC,  # Gateway            
+            HOST1_IP: HOST1_MAC,  # h1
+            HOST2_IP: HOST2_MAC,  # h2
+            HOST3_IP: HOST3_MAC,  # h3
+            HOST4_IP: HOST4_MAC,  # h3
         }
         self.host_ports = {
-            "08:00:27:a9:a6:9d": 1,  # Mininet
-            "0a:00:27:00:00:07" : 1,
-            "00:00:00:00:00:01": 2,  # h1
-            "00:00:00:00:00:02": 3,  # h2
-            "00:00:00:00:00:03": 4,  # h3
-            "00:00:00:00:00:04": 5,  # h4
+            VM_MAC: 1,  # Mininet
+            USER_MAC : 1,
+            HOST1_MAC: 2,  # h1
+            HOST2_MAC: 3,  # h2
+            HOST3_MAC: 4,  # h3
+            HOST4_MAC: 5,  # h4
         }
         wsgi.register(SimpleSwitchController, {simple_switch_instance_name: self})
 
@@ -72,11 +91,11 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         actions = []
         self.add_flow(datapath, 0, match, actions)
         
-        match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.24", ipv4_dst="192.168.173.19")
+        match = parser.OFPMatch(eth_type=0x0800, ipv4_src=USER_IP, ipv4_dst=VM_IP)
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
         self.add_flow(datapath, 100, match, actions)
         
-        match = parser.OFPMatch(eth_type=0x0800, ipv4_src="192.168.173.19", ipv4_dst="192.168.173.24")
+        match = parser.OFPMatch(eth_type=0x0800, ipv4_src=VM_IP, ipv4_dst=USER_IP)
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER),parser.OFPActionOutput(ofproto.OFPP_FLOOD)]  
         self.add_flow(datapath, 100, match, actions)
         
@@ -87,8 +106,8 @@ class SimpleSwitchRest13(app_manager.RyuApp):
 
         
         # 4️⃣ 所有 host 列表（後面迴圈要用）
-        hosts = ["192.168.173.101", "192.168.173.102", "192.168.173.103","192.168.173.104"]   
-        admin_hosts = ["192.168.173.19" , "192.168.173.24"]
+        hosts = [HOST1_IP, HOST2_IP, HOST3_IP] 
+        admin_hosts = [VM_IP,USER_IP]
         
         for host_ip in hosts:
             for admin_ip in admin_hosts:
@@ -156,7 +175,7 @@ class SimpleSwitchRest13(app_manager.RyuApp):
             parser.OFPMatch(eth_type=0x0800, ipv4_src=ip),
             parser.OFPMatch(eth_type=0x0800, ipv4_dst=ip),
         ]
-        excluded_ips = ["192.168.173.19", "192.168.173.24"]
+        excluded_ips = [VM_IP, USER_IP]
         
         for match in matches:
             for excluded_ip in excluded_ips:
@@ -278,7 +297,7 @@ class SimpleSwitchController(ControllerBase):
         policy_data = json.loads(req.body)       
         print(json.dumps(policy_data, indent=4))
        
-        datapath = self.simpl_switch_spp.switches.get(8796758451869)
+        datapath = self.simpl_switch_spp.switches.get(DPID)
         # 進行策略更新等
         update_acl_rules(policy_data)
         # 策略應用
@@ -295,7 +314,7 @@ class SimpleSwitchController(ControllerBase):
         ip = data.get("ip", None)    
         print(f"刪除的ip為{ip}")
         print(f"要刪除的DSL為: {rules}")
-        datapath = self.simpl_switch_spp.switches.get(8796758451869)
+        datapath = self.simpl_switch_spp.switches.get(DPID)
         self.simpl_switch_spp.delete_flows_by_ip(datapath, ip) # 刪除SDN層rules 
         delete_acl_rules_byip(ip) # 刪除DSL層的rules
         # 返回成功的回應

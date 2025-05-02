@@ -18,7 +18,7 @@ function HostsTable() {
 
   const API_URL_HOSTS = "http://sdn.yuntech.poc.com/ryu/hosts";
   const API_URL_LABEL = "http://sdn.yuntech.poc.com/datacenter/label/";
-  const labelCategories = ["function", "priority", "type", "application", "environment"];
+  const labelCategories = ["function", "priority", "type", "application", "environment","security"];
 
   useEffect(() => {
     fetch(API_URL_HOSTS)

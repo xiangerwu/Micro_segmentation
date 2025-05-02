@@ -17,6 +17,18 @@
 /ryu-backend/__pycache__
 /ryu-project/__pycache__
 
+/ryu-project/.env
+/ryu-project/config/acl_rules.txt
+/ryu-backend/.env
+/ryu-backend/log.txt
+/ryu-backend/dsl.txt
+/ryu-backend/intent.txt
+
+
+/gateway/log.txt
+
+
+
 # misc
 .DS_Store
 .env.local
@@ -27,3 +39,5 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+

@@ -3,6 +3,7 @@
     "priority": ["Null", "User", "Developer","Admin"],
     "type": ["Null", "Order", "Shipping", "Payment", "Management"],
     "application": ["Null", "ERP", "MRP","PLM","CAD"],
-    "environment": ["Null", "Production", "Testing","Staging", "Development"]    
+    "environment": ["Null", "Production", "Testing","Staging", "Development"],
+    "security" : ["Null","normal","vulnerable","quarantined"]
 }
   

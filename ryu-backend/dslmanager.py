@@ -1,11 +1,15 @@
 import json
 import requests
 import websockets
+from dotenv import load_dotenv
+import os 
 from urllib.parse import quote
 
+load_dotenv()
+RPG_FILE = os.getenv("RPG_FILE", "rpg_case_1.json")
 # 查詢RPG
 def load_rpg(ip):   
-    with open('epg_case_1.json', 'r') as file:
+    with open(RPG_FILE, 'r') as file:
         data = json.load(file)
     result = next((entry for entry in data if entry["ip"] == ip), None)
     print(result)
@@ -13,7 +17,7 @@ def load_rpg(ip):
 
 # 根據條件過濾出符合的 IP
 def get_matching_ips(type,label):     
-    with open('epg_case_1.json', 'r') as file:
+    with open(RPG_FILE, 'r') as file:
         data = json.load(file)              
     # 假設：type = "function"  、label = "Web"，
    

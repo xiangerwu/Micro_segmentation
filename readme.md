@@ -62,6 +62,25 @@ h3、h4 環境則是生產環境(environment:production)
 接著執行intent_case_1.py 建立基本intent
 最後執行intent_case_1_labelchange.py 把label 值做改變
 
+## Gateway 
+
+* 脫離業務意圖（Intent-based Violation）偵測
+
+防止橫向移動的基礎邏輯
+
+要安裝libnetfilter-queue 
+```
+  sudo apt update
+  sudo apt install libnfnetlink-dev libnetfilter-queue-dev -y
+```
+攔截所有 TCP 入站 SYN 封包，送進 NFQUEUE 給 Python 處理
+```
+  sudo iptables -I INPUT -p tcp --syn -j NFQUEUE --queue-num 1
+```
+
+紀錄各host端傳送過來得連線
+connection_logger.py 
+
 ## 常用語法
 
 * 查看流表規則

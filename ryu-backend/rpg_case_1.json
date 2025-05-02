@@ -3,25 +3,28 @@
         "ip": "192.168.173.101",
         "function": "Null",
         "priority": "Null",
-        "type": "Order",
-        "application": "Null",
-        "environment": "Production"
+        "type": "Null",
+        "application": "Order",
+        "environment": "Null",
+        "security": "normal"
     },
     {
         "ip": "192.168.173.102",
-        "function": "Database",
+        "function": "Null",
         "priority": "Null",
-        "type": "Payment",
-        "application": "Null",
-        "environment": "Testing"
+        "type": "Null",
+        "application": "Order",
+        "environment": "Null",
+        "security": "normal"
     },
     {
         "ip": "192.168.173.103",
-        "function": "Web",
+        "function": "Honeypot",
         "priority": "Null",
-        "type": "Shipping",
+        "type": "Null",
         "application": "Null",
-        "environment": "Production"
+        "environment": "Null",
+        "security": "vulnerable"
     },
     {
         "ip": "192.168.173.104",
@@ -29,6 +32,7 @@
         "priority": "Null",
         "type": "Shipping",
         "application": "Null",
-        "environment": "Production"
+        "environment": "Production",
+        "security": "Null"
     }
 ]
