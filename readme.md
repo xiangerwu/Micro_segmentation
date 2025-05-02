@@ -47,6 +47,25 @@ SDC URL記得去DNS 或 hosts上設置
   RPG_FILE=rpg_case_1.json # RPG 檔案名稱&路徑
 ```
 
+## 專案執行前
+
+清空以下紀錄
+
+*  /ryu-project/config/acl_rules.txt
+*  /ryu-backend/log.txt
+*  /ryu-backend/intent.txt
+*  /ryu-backend/dsl.txt
+
+* 把 .19 、 .24 以外的規則全數刪除(怕刪不乾淨使用，這兩台IP 為你的VM IP 以及你的電腦IP)
+```
+ovs-ofctl dump-flows ovsbr0 | grep -E "nw_(src|dst)=" | grep -v "nw_src=192.168.173.19" | grep -v "nw_dst=192.168.173.19" | grep -v "nw_src=192.168.173.24" | grep -v "nw_dst=192.168.173.24" | while read line; do
+    match=$(echo "$line" | sed -n 's/.* table=0, \(.*\) actions=.*/\1/p')
+    echo "ovs-ofctl --strict del-flows ovsbr0 \"$match\""
+    ovs-ofctl --strict del-flows ovsbr0 "$match"
+done
+```
+
+
 ## NGINX  
 使用nginx-proxy manager
 
@@ -123,14 +142,7 @@ connection_logger.py (已整合至case3)
 ```
 ovs-ofctl del-flows ovsbr0
 ```
-* 把 .19 、 .24 以外的規則全數刪除(怕刪不乾淨使用)
-```
-ovs-ofctl dump-flows ovsbr0 | grep -E "nw_(src|dst)=" | grep -v "nw_src=192.168.173.19" | grep -v "nw_dst=192.168.173.19" | grep -v "nw_src=192.168.173.24" | grep -v "nw_dst=192.168.173.24" | while read line; do
-    match=$(echo "$line" | sed -n 's/.* table=0, \(.*\) actions=.*/\1/p')
-    echo "ovs-ofctl --strict del-flows ovsbr0 \"$match\""
-    ovs-ofctl --strict del-flows ovsbr0 "$match"
-done
-```
+
 * 用 nc 驗證TCP
 ```
   h2 nc -l -p 3306 > /tmp/h2_3306.log 2>&1 &
