@@ -15,6 +15,38 @@ ryu-project (SDN Controller)
 [sdn](http://sdn.yuntech.poc.com/)
 ## 橋接方法
 https://hackmd.io/Gph1uzqZSNOTftnL287tHg
+
+## 環境變數說明
+###  ryu-project
+```
+  VM_IP="192.168.173.19"   # 你開的VM
+  USER_IP="192.168.173.28" # 你使用德電腦
+  HOST1_IP="192.168.173.101" # host 1 
+  HOST2_IP="192.168.173.102" # host 2 
+  HOST3_IP="192.168.173.103"
+  HOST4_IP="192.168.173.104"
+
+  HOST1_MAC="00:00:00:00:00:01"
+  HOST2_MAC="00:00:00:00:00:02"
+  HOST3_MAC="00:00:00:00:00:03"
+  HOST4_MAC="00:00:00:00:00:04"
+
+  VM_MAC="08:00:27:a9:a6:9d"
+  USER_MAC="08:00:27:3c:8f:0b"
+
+  DPID="8796758451869" # swithc  DPID（Datapath ID）: key 值
+```
+
+###　ryu-backend
+RPG 檔案名稱&路徑、會因為case不同而做切換
+
+SDC URL記得去DNS 或 hosts上設置
+```
+  SDC_HOST=http://sdn.yuntech.poc.com  # SDC 的URL 
+  WS_PORT=8765 # SDC 上web_socket port
+  RPG_FILE=rpg_case_1.json # RPG 檔案名稱&路徑
+```
+
 ## NGINX  
 使用nginx-proxy manager
 
@@ -79,7 +111,7 @@ h3、h4 環境則是生產環境(environment:production)
 ```
 
 紀錄各host端傳送過來得連線
-connection_logger.py 
+connection_logger.py (已整合至case3)
 
 ## 常用語法
 
