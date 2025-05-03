@@ -60,17 +60,17 @@ data = {
     "egresstype" : "security",
     "egress" : "normal",
     "protocol": "TCP",
-    "port" : "22",
+    "port" : "3306",
     "ingresstype" : "type",
     "ingress" : "Order"
 }
 response = requests.post(url, json=data)
 if response.status_code == 200:
-    print(f" {GREEN}Allow{RESET} security: normal  ===TCP 22 ===> type : Order ✅")
+    print(f" {GREEN}Allow{RESET} security: normal  ===TCP 3306 ===> type : Order ✅")
 else :
-    print(f" {GREEN}Allow{RESET} security: normal ===TCP 22===> type : Order ❌")
+    print(f" {GREEN}Allow{RESET} security: normal ===TCP 3306 ===> type : Order ❌")
     
-    # Allow 的設置
+# Allow 的設置
 data = {
     "method" : "allow",
     "egresstype" : "security",
@@ -84,4 +84,34 @@ if response.status_code == 200:
     print(f" {GREEN}Allow{RESET} security: normal  === ICMP ===> type : Order ✅")
 else :
     print(f" {GREEN}Allow{RESET} security: normal === ICMP ===> type : Order ❌")
+    
+
+# Deny 的設置
+data = {
+    "method" : "deny",
+    "egresstype" : "security",
+    "egress" : "normal",
+    "protocol": "ICMP",
+    "ingresstype" : "security",
+    "ingress" : "quarantined"
+}
+response = requests.post(url, json=data)
+if response.status_code == 200:
+    print(f" {RED}Deny{RESET} security: normal ===ICMP===> security : quarantined ✅")
+else :
+    print(f" {RED}Deny{RESET} security: normal ===ICMP===> security : quarantined ❌")
+    
+data = {
+    "method" : "deny",
+    "egresstype" : "security",
+    "egress" : "normal",
+    "protocol": "TCP",
+    "ingresstype" : "security",
+    "ingress" : "quarantined"
+}
+response = requests.post(url, json=data)
+if response.status_code == 200:
+    print(f" {RED}Deny{RESET} security: normal ===TCP===> security : quarantined ✅")
+else :
+    print(f" {RED}Deny{RESET} security: normal ===TCP===> security : quarantined ❌")
     

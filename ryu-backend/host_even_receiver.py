@@ -6,6 +6,44 @@ import os
 import signal
 import time 
 # ================= WebSocket Server 接收主機事件 =================
+
+# 讀取DSL
+def load_dsl_rules(file_path="dsl.txt"):
+    rules = []
+    with open(file_path, "r") as f:
+        for line in f:
+            if not line.strip().startswith("allow"):
+                continue
+            try:
+                # 解析語法：allow{TCP, A, B},{ 3306, (security:xxx),(type:xxx) }
+                part1, part2 = line.strip().split("},{")
+                proto, src, dst = part1.replace("allow{", "").split(",")
+                port = part2.split(",")[0].strip()
+                port = int(port) if port else None
+                rules.append({
+                    "protocol": proto.strip(),
+                    "src_ip": src.strip(),
+                    "dst_ip": dst.strip().rstrip(" }"),
+                    "port": port
+                })
+            except Exception as e:
+                print(f"[!] DSL 解析錯誤：{e}")
+    return rules
+
+# 檢查event 是否allow
+def is_event_allowed(event, rules):
+    if event["dst_port"] in [8765, 8766]:
+        return True
+    for rule in rules:
+        if (
+            rule["protocol"].upper() == event["protocol"].upper()
+            and rule["src_ip"] == event["src_ip"]
+            and rule["dst_ip"] == event["dst_ip"]
+            and (rule["port"] is None or rule["port"] == event["dst_port"])
+        ):
+            return True
+    return False
+
 # 寫入到 log.txt
 def log_event_to_file(event):
     print(event)
@@ -36,17 +74,32 @@ def free_port(port):
         print(f"[❌] 釋放 port 失敗：{e}")
 
 async def handle_event(websocket):
+    rules = load_dsl_rules()  # 每次連線前載入最新 dsl.txt
+    
     async for message in websocket:
         try:
             event = json.loads(message)
             print(f"[✅] 收到來自主機的事件：{event}")
 
             # TODO: 你可以在這裡加入 intent 白名單檢查邏輯
-            log_event_to_file(event)  # ✅ 寫入 log.txt
-            response = {"status": "received", "intent_check": "todo"}
+            allowed = is_event_allowed(event, rules)
+            if allowed:
+                response = {"status": "received", "intent_check": "allowed"}
+                print(f"[✅] 收到來自主機的事件，符合 DSL 規則：{event}")
+            else:
+                response = {
+                    "status": "received",
+                    "intent_check": "⚠ not allowed",
+                    "action": "block_suggested",
+                    "reason": "Intent not defined in DSL"
+                }
+                print(f"[❌] 收到來自主機的事件，但不在 DSL 規則中，建議阻擋：{event}")
+                log_event_to_file(event)  # ✅ 寫入 log.txt
             await websocket.send(json.dumps(response))
+        except websockets.exceptions.ConnectionClosedOK as e:
+            print(f"[ℹ️] 主機連線已正常關閉：{e}")
         except Exception as e:
-            print(f"[❌] 接收錯誤：{e}")
+            print(f"[❌] WebSocket 錯誤：{e}")
 
 async def start_websocket_server():
     print("[*] 啟動 WebSocket Server 監聽 0.0.0.0:8765")

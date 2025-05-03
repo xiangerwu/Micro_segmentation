@@ -64,6 +64,12 @@ ovs-ofctl dump-flows ovsbr0 | grep -E "nw_(src|dst)=" | grep -v "nw_src=192.168.
     ovs-ofctl --strict del-flows ovsbr0 "$match"
 done
 ```
+3. 安裝相關環境、設置hosts DNS
+
+pip install requirements.txt
+python version==3.9.21
+node version=v16.16.0
+npm version 8.11.0
 
 
 ## NGINX  
@@ -106,7 +112,8 @@ Python 環境 : conda test_env
 h1、h2 環境皆是測試環境(environment:testing)
 h3、h4 環境則是生產環境(environment:production)
 
-兩個環境無法透過TCP3306溝通，表示兩個獨立環境。
+兩個環
+境無法透過TCP3306溝通，表示兩個獨立環境。
 需求中h1的label會調整成production，觸發微分段邏輯，驗證h1可以與生產環境溝通
 
 先執行 case/custom_topo_case1.py 建立host、初始化RPG 以及設定網路環境

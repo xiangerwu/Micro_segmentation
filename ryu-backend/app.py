@@ -135,7 +135,7 @@ async def submit_labels():
         label_changed = True # 標籤有變更
         
     # 將更新後的資料寫回 epg.json
-    with open('epg_case_3.json', 'w') as file:        
+    with open(RPG_FILE, 'w') as file:        
         json.dump(epg_data, file, indent=4)
     
     # DSL 有改變，需重新評估
@@ -149,8 +149,8 @@ async def submit_labels():
 # 查詢特定RP中的RPG內容
 @app.route('/datacenter/epg/<ip>', methods=['GET'])
 def get_epg(ip):
-    epg_values = load_rpg(ip)
-    return jsonify(epg_values)
+    rpg_values = load_rpg(ip)
+    return jsonify(rpg_values)
 
 # 意圖增加
 ''' 

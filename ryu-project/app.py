@@ -34,7 +34,7 @@ HOST1_MAC = os.getenv("HOST1_MAC", "00:00:00:00:00:01")
 HOST2_MAC = os.getenv("HOST2_MAC", "00:00:00:00:00:02")
 HOST3_MAC = os.getenv("HOST3_MAC", "00:00:00:00:00:03")
 HOST4_MAC = os.getenv("HOST4_MAC", "00:00:00:00:00:04")
-DPID=os.getenv("DPID", 8796758451869) # 8796758451869 = 0x7f0000000001
+DPID=int(os.getenv("DPID", 8796758451869)) # 8796758451869 = 0x7f0000000001
 
 simple_switch_instance_name = 'simple_switch_api_app'
 
@@ -81,7 +81,8 @@ class SimpleSwitchRest13(app_manager.RyuApp):
         
         self.switches[datapath.id] = datapath
         
-        dpid = datapath.id         
+        dpid = datapath.id      
+        print(f"Switch connected, DPID = {dpid}")   
         self.mac_to_port.setdefault(datapath.id, {})
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
