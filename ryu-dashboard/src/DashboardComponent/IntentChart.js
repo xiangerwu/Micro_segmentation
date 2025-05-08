@@ -8,24 +8,14 @@ import {
   Position
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import CustomNode from "./CustomNode";
 
 import { Tag , Flex , Stack , Heading } from "@chakra-ui/react";
 
 const MIN_DISTANCE = 150;
 
-const nodeDefaults = {
-  sourcePosition: Position.Right,
-  targetPosition: Position.Left,
-  style: {
-    borderRadius: '0%',  // 修改為 '0%' 來使節點為長方形
-    backgroundColor: '#fff',
-    width: 100,           // 調整寬度
-    height: 50,           // 調整高度
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    
-  },
+const nodeTypes = {
+  custom: CustomNode,
 };
 
 const generatePosition = (index) => {
@@ -47,13 +37,14 @@ function IntentChart() {
           // 讀取 nodes.json          
           const Response = await fetch('http://sdn.yuntech.poc.com/datacenter/dsl')
           const ResJson = await Response.json();
-          
+          let idx = 0 ;
           // 動態生成位置並更新 state
           const updatedNodes = ResJson.nodes.map((node, index) => ({
             id: node.id,
+            type: 'custom', // 使用自定義的 ResizerNode
             position: generatePosition(index), // 動態生成位置
-            data: { type: node.type, label: node.label },
-            ...nodeDefaults,
+            
+            data: { type: node.type, label: node.label , count: node.count},           
           }));
   
           // 更新 nodes 狀態
@@ -69,6 +60,7 @@ function IntentChart() {
             label: edge.label,
             animated: true, 
             action : edge.action,
+            sourceHandle: "h-" + (idx++),
             style: { stroke: edge.action == "deny" ? "red" : "teal" }, 
             markerEnd: { type: MarkerType.ArrowClosed },
           }));
@@ -79,37 +71,17 @@ function IntentChart() {
     loadData();
 
   },[setNodes,setEdges])
-  
-  // Render node labels
-  // 這裡可以根據需要自定義節點的標籤渲染
-  const nodeLabelRenderer = (node) => {
-    const { label, type  } = node.data;
 
-    return (
-      <div style={{ textAlign: "center" , justifyContent: "center" }}>
-        <div>{label}</div>        
-        <Flex align="center" justify="center" mt="5px">            
-            <Tag size="sm" variant="solid" colorScheme="blue" mr="5px">{type}</Tag>       
-        </Flex>
-      </div>
-    );
-  };
 
   return (
     <Stack align="center" ml = "10%" mr="10%" w="80%" h="1000px">
        <Heading> 策略可達圖 </Heading>
       <ReactFlow
-        nodes={nodes.map((node) => ({
-          ...node,
-          data: {
-            ...node.data,
-            label: nodeLabelRenderer(node),
-          },
-        }))}
+        nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-         
+        nodeTypes={nodeTypes} // 自定義nodes
         style={{ backgroundColor: "#F7F9FB" }}
         fitView
       >
