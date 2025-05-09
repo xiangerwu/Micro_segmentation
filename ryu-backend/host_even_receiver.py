@@ -5,8 +5,11 @@ import socket
 import os 
 import signal
 import time 
+import requests
 # ================= WebSocket Server 接收主機事件 =================
 
+global limit
+limit = 3 
 # 讀取DSL
 def load_dsl_rules(file_path="dsl.txt"):
     rules = []
@@ -74,8 +77,8 @@ def free_port(port):
         print(f"[❌] 釋放 port 失敗：{e}")
 
 async def handle_event(websocket):
-    rules = load_dsl_rules()  # 每次連線前載入最新 dsl.txt
-    
+    rules = load_dsl_rules()  # 每次連線前載入最新 dsl.txt   
+    global limit
     async for message in websocket:
         try:
             event = json.loads(message)
@@ -87,13 +90,34 @@ async def handle_event(websocket):
                 response = {"status": "received", "intent_check": "allowed"}
                 print(f"[✅] 收到來自主機的事件，符合 DSL 規則：{event}")
             else:
+                limit -= 1
+                print(limit)
                 response = {
                     "status": "received",
                     "intent_check": "⚠ not allowed",
                     "action": "block_suggested",
                     "reason": "Intent not defined in DSL"
                 }
-                print(f"[❌] 收到來自主機的事件，但不在 DSL 規則中，建議阻擋：{event}")
+                if limit <= 0:
+                    print(f"[❌] 嘗試連線次數過多，進行阻擋：{event}")
+                    url = "http://sdn.yuntech.poc.com/datacenter/submit_labels"
+                    
+                    data = {
+                        "hostInfo" : {
+                            "ipv4" : [event["src_ip"],]
+                        },
+                        "labels" : {
+                            "function" : "Null",
+                            "priority" : "Null",
+                            "type": "Order",
+                            "application": "Null",
+                            "environment" : "Null",
+                            "security" : "quarantined"
+                        }    
+                    }
+                    response = requests.post(url, json=data)
+                else : 
+                    print(f"[❌] 收到來自主機的事件，但不在 DSL 規則中，建議阻擋：{event}")
                 log_event_to_file(event)  # ✅ 寫入 log.txt
             await websocket.send(json.dumps(response))
         except websockets.exceptions.ConnectionClosedOK as e:

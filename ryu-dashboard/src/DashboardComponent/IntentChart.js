@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   ReactFlow,
   MarkerType,
@@ -11,6 +11,7 @@ import "@xyflow/react/dist/style.css";
 import CustomNode from "./CustomNode";
 
 import { Tag , Flex , Stack , Heading } from "@chakra-ui/react";
+import react from "react";
 
 const MIN_DISTANCE = 150;
 
@@ -30,6 +31,8 @@ function IntentChart() {
   
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const edgeCache = useRef([]); // 用於緩存邊的 ID
+  const initializedRef = useRef(false); // 用於檢查是否已經初始化過
 
   useEffect(()=>{
     const loadData = async () => {
@@ -38,40 +41,46 @@ function IntentChart() {
           const Response = await fetch('http://sdn.yuntech.poc.com/datacenter/dsl')
           const ResJson = await Response.json();
           let idx = 0 ;
-          // 動態生成位置並更新 state
+          
+          // 將 nodes.json 中的每個節點轉換為 React Flow 的節點格式
           const updatedNodes = ResJson.nodes.map((node, index) => ({
             id: node.id,
-            type: 'custom', // 使用自定義的 ResizerNode
+            type: 'custom', // 使用自定義的節點類型
             position: generatePosition(index), // 動態生成位置
-            
             data: { type: node.type, label: node.label , count: node.count},           
           }));
   
           // 更新 nodes 狀態
           setNodes(updatedNodes);
 
-          //const edgesResponse = await fetch('/data/edges.json');
-          //const edgesData = await edgesResponse.json();
+          
           // edge的部分
           const updatedEdges = ResJson.edges.map(edge => ({
             id: edge.id,
             source: edge.source,
             target: edge.target,
-            label: edge.label,
+            label: edge.label,            
             animated: true, 
             action : edge.action,
             sourceHandle: "h-" + (idx++),
             style: { stroke: edge.action == "deny" ? "red" : "teal" }, 
             markerEnd: { type: MarkerType.ArrowClosed },
           }));
-          console.log(updatedEdges)
-          setEdges(updatedEdges)
+          setEdges(updatedEdges);
+          //edgeCache.current = updatedEdges;          
     }
 
     loadData();
 
   },[setNodes,setEdges])
 
+  // 等nodes 初始化完成後，再設定edges
+  const onInit = (reactFlowInstance) => {
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      setEdges(edgeCache.current);
+    }
+  };
 
   return (
     <Stack align="center" ml = "10%" mr="10%" w="80%" h="1000px">
@@ -79,9 +88,10 @@ function IntentChart() {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onInit={onInit}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes} // 自定義nodes
+        nodeTypes={nodeTypes}        
         style={{ backgroundColor: "#F7F9FB" }}
         fitView
       >

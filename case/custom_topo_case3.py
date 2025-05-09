@@ -56,5 +56,9 @@ if __name__ == '__main__':
     makeTerm(net.get('h1'), cmd="bash")
     makeTerm(net.get('h2'), cmd="bash")
     
+    print("\n🔁 執行 h1 ~ h3 的 ping 測試...")
+    net.get('h1').cmdPrint('ping -c 2 192.168.173.19')
+    net.get('h2').cmdPrint('ping -c 2 192.168.173.19')
+    
     CLI(net)
     net.stop()

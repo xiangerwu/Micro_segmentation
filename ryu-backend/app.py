@@ -258,32 +258,6 @@ def get_all_dsl():
         "edges": edges
     }
     return jsonify(data)
-# 不確定有沒有用到 
-# 神秘的URL
-@app.route('/datacenter/dsl/ryu', methods=['GET'])
-def get_dsl_ryu():
-    result = []
-    with open('dsl.txt', 'r') as dsl_file:
-        lines = dsl_file.readlines()
-    pattern = r"allow \{ (\w+), (\d+\.\d+\.\d+\.\d+), (\d+\.\d+\.\d+\.\d+) \}"
-    for line in lines:
-        # 使用正則表達式來提取需要的部分
-        match = re.match(pattern, line.strip())
-        if match:
-            protocol = match.group(1)
-            egress_ip = match.group(2)
-            ingress_ip = match.group(3)
-            
-            # 建立 JSON 結構
-            rule = {
-                "allow": {
-                    "protocol": protocol,
-                    "egress_ip": egress_ip,
-                    "ingress_ip": ingress_ip
-                }
-            }
-            result.append(rule)
-    return jsonify(result)
     
 # ✅ 在 Flask 主程式之前就啟動 WebSocket Server（背景執行）
 ws_thread = threading.Thread(target=launch_ws_server, daemon=True)
