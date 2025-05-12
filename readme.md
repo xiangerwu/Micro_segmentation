@@ -156,3 +156,13 @@ ovs-ofctl del-flows ovsbr0
 ```
 
 
+### 2025/05/13 wzx edit
+
+新的虛擬機使用 pip install -r requirement 會報錯
+所以增加了 install.py 來安裝套件並最後列出安裝失敗的套件
+有些套件需要 gcc 函式庫，所以要 
+
+```bash
+sudo apt install -y gcc libnetfilter-queue-dev libnfnetlink-dev libxtables-dev 
+```
+
