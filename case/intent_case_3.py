@@ -4,18 +4,23 @@
 
 import requests
 import json
+from dotenv import load_dotenv
+import os
 
-
+load_dotenv()
 
 RED = '\033[91m'
 RESET = '\033[0m'
 GREEN = '\033[92m'
 YELLOW = '\033[93m'
 url = "http://sdn.yuntech.poc.com/datacenter/submit_labels"
+
+HOST1_IP = os.getenv('HOST1_IP', '')
+HOST2_IP = os.getenv("HOST2_IP", "")
 # 初始化 RPG ==>  初始化
 data = {
     "hostInfo" : {
-        "ipv4" : ["192.168.173.101",]
+        "ipv4" : [HOST1_IP,]
     },
     "labels" : {        
         "function" : "Null",
@@ -34,7 +39,7 @@ else :
 
 data = {
     "hostInfo" : {
-        "ipv4" : ["192.168.173.102",]
+        "ipv4" : [HOST2_IP,]
     },
     "labels" : {
         "function" : "Null",

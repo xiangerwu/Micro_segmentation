@@ -5,14 +5,21 @@ from mininet.link import TCLink
 from mininet.cli import CLI
 from mininet.term import makeTerm  # 放在 import 區
 import os
+from dotenv import load_dotenv
 import time
+
+load_dotenv()
+
+HOST1_IP = os.getenv('HOST1_IP', '')
+HOST2_IP = os.getenv("HOST2_IP", "")
 
 class CustomTopo(Topo):
     def build(self):
         s1 = self.addSwitch('s1')
         # Host 設定
-        h1 = self.addHost('h1', ip='192.168.173.101/24', mac='00:00:00:00:00:01')
-        h2 = self.addHost('h2', ip='192.168.173.102/24', mac='00:00:00:00:00:02')
+        
+        h1 = self.addHost('h1', ip=HOST1_IP + '/24', mac='00:00:00:00:00:01')
+        h2 = self.addHost('h2', ip=HOST2_IP + '/24', mac='00:00:00:00:00:02')
        
         # 不指定 port，Mininet 自行建立，後面我們會手動替換
         self.addLink(h1, s1)
